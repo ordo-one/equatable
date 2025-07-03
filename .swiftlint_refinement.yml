@@ -1,0 +1,3 @@
+# https://realm.github.io/SwiftLint/rule-directory.html
+disabled_rules:
+#  - some_rule_to_disable
