@@ -1,5 +1,5 @@
 import SwiftUI
-import EquatableKit
+import Equatable
 
 struct MyView: View {
     let int: Int
@@ -12,7 +12,7 @@ struct MyView: View {
 @Equatable
 struct Test {
     let name: String
-    @EquatableSafeClosure
+    @EquatableIgnoredUnsafeClosure
     let closure: (() -> Void)?
 }
 
@@ -40,8 +40,8 @@ struct ContentView: View {
     let id: String
     let hour: Int = 21
     @EquatableIgnored let classType: ClassType
-    @EquatableSafeClosure let onTapOptional: (() -> Void)?
-    @EquatableSafeClosure let onTap: () -> Void
+    @EquatableIgnoredUnsafeClosure let onTapOptional: (() -> Void)?
+    @EquatableIgnoredUnsafeClosure let onTap: () -> Void
 
 
     var body: some View {
@@ -61,7 +61,7 @@ struct Person {
     let lastName: String
     let random: String
     let id: UUID
-    @EquatableSafeClosure
+    @EquatableIgnoredUnsafeClosure
     let closure: (() -> Void)?}
 
 struct NestedType: Equatable {
@@ -95,7 +95,7 @@ struct TitleView: View {
 
 @Equatable
 struct BandView: View {
-    @EquatableSafeClosure let onTap: () -> Void
+    @EquatableIgnoredUnsafeClosure let onTap: () -> Void
     let name: String
 
     var body: some View {
@@ -115,7 +115,7 @@ struct ProfileView: View {
     @State private var isLoading = false           // Automatically skipped
     @ObservedObject var viewModel: ProfileViewModel // Automatically skipped
     @EquatableIgnored var cachedValue: String? // This property will be excluded
-    @EquatableSafeClosure var onTap: () -> Void // This closure is safe and will be ignored in comparison
+    @EquatableIgnoredUnsafeClosure var onTap: () -> Void // This closure is safe and will be ignored in comparison
     let id: UUID // will be compared first for shortcircuiting equality checks
     var body: some View {
         VStack {

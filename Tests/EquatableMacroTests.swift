@@ -1,6 +1,5 @@
 import Testing
 import MacroTesting
-import Equatable
 import EquatableMacros
 
 @Suite(
@@ -8,7 +7,7 @@ import EquatableMacros
     [
         "Equatable": EquatableMacro.self,
         "EquatableIgnored": EquatableIgnoredMacro.self,
-        "EquatableSafeClosure": EquatableSafeClosureMacro.self
+        "EquatableIgnoredUnsafeClosure": EquatableIgnoredUnsafeClosureMacro.self
     ],
     record: .missing
   )
@@ -193,19 +192,49 @@ struct EquatableMacroTests {
         }
     }
 
+    @Test func testEquatableIgnoredCannotBeAppliedToBindings() async throws {
+        assertMacro {
+            """
+            @Equatable
+            struct CustomView: View {
+                @EquatableIgnored @Binding var name: String
+            
+                var body: some View {
+                    Text("CustomView")
+                }
+            }
+            """
+        } diagnostics: {
+          """
+          @Equatable
+          ┬─────────
+          ╰─ 🛑 @Equatable requires at least one equatable stored property.
+          struct CustomView: View {
+              @EquatableIgnored @Binding var name: String
+              ┬────────────────
+              ╰─ 🛑 @EquatableIgnored cannot be applied to @Binding properties
+
+              var body: some View {
+                  Text("CustomView")
+              }
+          }
+          """
+        }
+    }
+
     @Test func testArbitaryClosuresNotAllowed() async throws {
         // There is a bug in assertMacro somewhere and it produces the fixit with
         //
         //        @Equatable
         //        struct CustomView: View {
-        //            var name: String @EquatableSafeClosure
+        //            var name: String @EquatableIgnoredUnsafeClosure
         //            let closure: (() -> Void)?
         //
         //            var body: some View {
         //                Text("CustomView")
         //            }
         //        }
-        // In reality the fix it works as expected and adds a \n between the @EquatableSafeClosure and name variable.
+        // In reality the fix it works as expected and adds a \n between the @EquatableIgnoredUnsafeClosure and name variable.
         assertMacro {
             """
             @Equatable
@@ -226,7 +255,7 @@ struct EquatableMacroTests {
                 let closure: (() -> Void)?
                 ┬─────────────────────────
                 ╰─ 🛑 Arbitary closures are not supported in @Equatable
-                   ✏️ Consider marking the closure with @EquatableSafeClosure if it doesn't effect the view's body output.
+                   ✏️ Consider marking the closure with @EquatableIgnoredUnsafeClosure if it doesn't effect the view's body output.
             
                 var body: some View {
                     Text("CustomView")
@@ -237,7 +266,7 @@ struct EquatableMacroTests {
             """
             @Equatable
             struct CustomView: View {
-                var name: String @EquatableSafeClosure 
+                var name: String @EquatableIgnoredUnsafeClosure 
                 let closure: (() -> Void)?
             
                 var body: some View {
@@ -265,12 +294,12 @@ struct EquatableMacroTests {
         }
     }
 
-    @Test func closuresMarkedWithEquatableSafeClosure() async throws {
+    @Test func closuresMarkedWithEquatableIgnoredUnsafeClosure() async throws {
         assertMacro {
             """
             @Equatable
             struct CustomView: View {
-                @EquatableSafeClosure let closure: (() -> Void)?
+                @EquatableIgnoredUnsafeClosure let closure: (() -> Void)?
                 var name: String
 
                 var body: some View {
@@ -304,7 +333,7 @@ struct EquatableMacroTests {
         """
         @Equatable
         struct NoProperties: View {
-            @EquatableSafeClosure let onTap: () -> Void
+            @EquatableIgnoredUnsafeClosure let onTap: () -> Void
 
             var body: some View {
                 Text("")
@@ -317,7 +346,7 @@ struct EquatableMacroTests {
             ┬─────────
             ╰─ 🛑 @Equatable requires at least one equatable stored property.
             struct NoProperties: View {
-                @EquatableSafeClosure let onTap: () -> Void
+                @EquatableIgnoredUnsafeClosure let onTap: () -> Void
             
                 var body: some View {
                     Text("")
@@ -355,8 +384,8 @@ struct EquatableMacroTests {
             let id: String
             let hour: Int = 21
             @EquatableIgnored let classType: ClassType
-            @EquatableSafeClosure let onTapOptional: (() -> Void)?
-            @EquatableSafeClosure let onTap: () -> Void
+            @EquatableIgnoredUnsafeClosure let onTapOptional: (() -> Void)?
+            @EquatableIgnoredUnsafeClosure let onTap: () -> Void
 
 
             var body: some View {

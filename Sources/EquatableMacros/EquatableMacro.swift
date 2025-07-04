@@ -10,7 +10,7 @@ import SwiftDiagnostics
 /// that aren't explicitly marked to be skipped with `@EquatableIgnored`. Properties with SwiftUI property wrappers
 /// (like `@State`, `@ObservedObject`, etc.)
 ///
-/// Structs with arbitary closures are not supported unless they are marked explicitly with `@EquatableSafeClosure` -
+/// Structs with arbitary closures are not supported unless they are marked explicitly with `@EquatableIgnoredUnsafeClosure` -
 /// meaning that they are safe because they don't  influence rendering of the view's body.
 ///
 /// Usage:
@@ -23,7 +23,7 @@ import SwiftDiagnostics
 ///     @State private var isLoading = false           // Automatically skipped
 ///     @ObservedObject var viewModel: ProfileViewModel // Automatically skipped
 ///     @EquatableIgnored var cachedValue: String? // This property will be excluded
-///     @EquatableSafeClosure var onTap: () -> Void // This closure is safe and will be ignored in comparison
+///     @EquatableIgnoredUnsafeClosure var onTap: () -> Void // This closure is safe and will be ignored in comparison
 ///     let id: UUID // will be compared first for shortcircuiting equality checks
 ///
 ///     var body: some View {
@@ -112,11 +112,11 @@ public struct EquatableMacro: ExtensionMacro {
                 return nil
             }
 
-            // if it's a closure marked with @EquatableSafeClosure allow it but don't compare
-            if isMarkedWithEquatableSafeClosure(varDecl) {
+            // if it's a closure marked with @EquatableIgnoredUnsafeClosure allow it but don't compare
+            if isMarkedWithEquatableIgnoredUnsafeClosure(varDecl) {
                 return nil
             } else {
-                // If it's a closure and not marked with @EquatableSafeClosure throw a diagnostic
+                // If it's a closure and not marked with @EquatableIgnoredUnsafeClosure throw a diagnostic
                 if let typeAnnotation = binding.typeAnnotation?.type {
                     if isClosure(type: typeAnnotation) {
                         let diagnostic = Self.makeClosureDiagnostic(for: varDecl)
@@ -181,10 +181,10 @@ public struct EquatableMacro: ExtensionMacro {
         return [extensionSyntax]
     }
 
-    private static func isMarkedWithEquatableSafeClosure(_ varDecl: VariableDeclSyntax) -> Bool {
+    private static func isMarkedWithEquatableIgnoredUnsafeClosure(_ varDecl: VariableDeclSyntax) -> Bool {
         return varDecl.attributes.contains(where: { attribute in
             if let attributeName = attribute.as(AttributeSyntax.self)?.attributeName.as(IdentifierTypeSyntax.self)?.name.text {
-                return attributeName == "EquatableSafeClosure"
+                return attributeName == "EquatableIgnoredUnsafeClosure"
             }
 
             return false
@@ -230,7 +230,7 @@ public struct EquatableMacro: ExtensionMacro {
         let attribute = AttributeSyntax(
             leadingTrivia: .space,
             atSign: .atSignToken(),
-            attributeName: IdentifierTypeSyntax(name: .identifier("EquatableSafeClosure")),
+            attributeName: IdentifierTypeSyntax(name: .identifier("EquatableIgnoredUnsafeClosure")),
             trailingTrivia: .space
         )
         let existingAttributes = varDecl.attributes
@@ -240,7 +240,7 @@ public struct EquatableMacro: ExtensionMacro {
             node: varDecl,
             message: MacroExpansionErrorMessage("Arbitary closures are not supported in @Equatable"),
             fixIt: .replace(
-                message: SimpleFixItMessage(message: "Consider marking the closure with @EquatableSafeClosure if it doesn't effect the view's body output.", fixItID: .init(domain: "", id: "test")),
+                message: SimpleFixItMessage(message: "Consider marking the closure with @EquatableIgnoredUnsafeClosure if it doesn't effect the view's body output.", fixItID: .init(domain: "", id: "test")),
                 oldNode: varDecl,
                 newNode: fixedDecl
             )
@@ -255,7 +255,7 @@ struct EquatablePlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         EquatableMacro.self,
         EquatableIgnoredMacro.self,
-        EquatableSafeClosureMacro.self
+        EquatableIgnoredUnsafeClosureMacro.self
     ]
 }
 
