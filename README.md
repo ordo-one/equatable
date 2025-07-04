@@ -75,7 +75,7 @@ extension ProfileView: Equatable {
 
 Closures marked with `@EquatableIgnoredUnsafeClosure` should not affect the logical identity of the type. For example:
 
-### Exammple - Safe Usage of `@EquatableIgnoredUnsafeClosure`
+### Example - Safe Usage of `@EquatableIgnoredUnsafeClosure`
 ```swift
 struct UserActions: Equatable {
     let id: UUID
