@@ -1,8 +1,9 @@
+import Foundation
 import SwiftCompilerPlugin
+import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
-import SwiftDiagnostics
 
 /// A macro that automatically generates an `Equatable` conformance for structs.
 ///
@@ -10,7 +11,7 @@ import SwiftDiagnostics
 /// that aren't explicitly marked to be skipped with `@EquatableIgnored`. Properties with SwiftUI property wrappers
 /// (like `@State`, `@ObservedObject`, etc.)
 ///
-/// Structs with arbitary closures are not supported unless they are marked explicitly with `@EquatableSafeClosure` -
+/// Structs with arbitary closures are not supported unless they are marked explicitly with `@EquatableIgnoredUnsafeClosure` -
 /// meaning that they are safe because they don't  influence rendering of the view's body.
 ///
 /// Usage:
@@ -23,7 +24,7 @@ import SwiftDiagnostics
 ///     @State private var isLoading = false           // Automatically skipped
 ///     @ObservedObject var viewModel: ProfileViewModel // Automatically skipped
 ///     @EquatableIgnored var cachedValue: String? // This property will be excluded
-///     @EquatableSafeClosure var onTap: () -> Void // This closure is safe and will be ignored in comparison
+///     @EquatableIgnoredUnsafeClosure var onTap: () -> Void // This closure is safe and will be ignored in comparison
 ///     let id: UUID // will be compared first for shortcircuiting equality checks
 ///
 ///     var body: some View {
@@ -58,11 +59,12 @@ public struct EquatableMacro: ExtensionMacro {
         "AppStorage"
     ]
 
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     public static func expansion(
         of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
         providingExtensionsOf type: some TypeSyntaxProtocol,
-        conformingTo protocols: [TypeSyntax],
+        conformingTo _: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
         // Ensure we're attached to a struct
@@ -85,23 +87,12 @@ public struct EquatableMacro: ExtensionMacro {
             }
 
             // Skip properties with SwiftUI attributes (like @State, @Binding, etc.) or if they are marked with @EqutableIgnored
-            let shouldSkip = varDecl.attributes.contains { attribute in
-                if let attributeName = attribute.as(AttributeSyntax.self)?.attributeName.as(IdentifierTypeSyntax.self)?.name.text {
-                    return attributeName == "EquatableIgnored" || Self.skippablePropertyWrappers.contains(attributeName)
-                }
-                return false
-            }
-
-            if shouldSkip {
+            if Self.shouldShip(varDecl) {
                 return nil
             }
 
             // Skip static properties
-            let isStatic = varDecl.modifiers.contains { modifier in
-                modifier.name.tokenKind == .keyword(.static)
-            }
-
-            if isStatic {
+            if Self.isStatic(varDecl) {
                 return nil
             }
 
@@ -112,11 +103,11 @@ public struct EquatableMacro: ExtensionMacro {
                 return nil
             }
 
-            // if it's a closure marked with @EquatableSafeClosure allow it but don't compare
-            if isMarkedWithEquatableSafeClosure(varDecl) {
+            // if it's a closure marked with @EquatableIgnoredUnsafeClosure allow it but don't compare
+            if isMarkedWithEquatableIgnoredUnsafeClosure(varDecl) {
                 return nil
             } else {
-                // If it's a closure and not marked with @EquatableSafeClosure throw a diagnostic
+                // If it's a closure and not marked with @EquatableIgnoredUnsafeClosure throw a diagnostic
                 if let typeAnnotation = binding.typeAnnotation?.type {
                     if isClosure(type: typeAnnotation) {
                         let diagnostic = Self.makeClosureDiagnostic(for: varDecl)
@@ -138,17 +129,7 @@ public struct EquatableMacro: ExtensionMacro {
 
         // Sort properties: "id" first, then by type complexity
         let sortedProperties = storedProperties.sorted { lhs, rhs in
-            // "id" always comes first
-            if lhs.name == "id" { return true }
-            if rhs.name == "id" { return false }
-
-            let lhsComplexity = typeComplexity(lhs.type)
-            let rhsComplexity = typeComplexity(rhs.type)
-
-            if lhsComplexity == rhsComplexity {
-                return lhs.name < rhs.name
-            }
-            return lhsComplexity < rhsComplexity
+            return Self.compare(lhs: lhs, rhs: rhs)
         }
 
         guard !storedProperties.isEmpty else {
@@ -167,12 +148,12 @@ public struct EquatableMacro: ExtensionMacro {
         let equalityImplementation = comparisons.isEmpty ? "true" : comparisons
 
         let extensionDecl: DeclSyntax = """
-            extension \(type): Equatable {
-                nonisolated public static func == (lhs: \(type), rhs: \(type)) -> Bool {
-                    \(raw: equalityImplementation)
-                }
+        extension \(type): Equatable {
+            nonisolated public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                \(raw: equalityImplementation)
             }
-            """
+        }
+        """
 
         guard let extensionSyntax = extensionDecl.as(ExtensionDeclSyntax.self) else {
             return []
@@ -181,20 +162,51 @@ public struct EquatableMacro: ExtensionMacro {
         return [extensionSyntax]
     }
 
-    private static func isMarkedWithEquatableSafeClosure(_ varDecl: VariableDeclSyntax) -> Bool {
-        return varDecl.attributes.contains(where: { attribute in
+    // Skip properties with SwiftUI attributes (like @State, @Binding, etc.) or if they are marked with @EqutableIgnored
+    private static func shouldShip(_ varDecl: VariableDeclSyntax) -> Bool {
+        varDecl.attributes.contains { attribute in
             if let attributeName = attribute.as(AttributeSyntax.self)?.attributeName.as(IdentifierTypeSyntax.self)?.name.text {
-                return attributeName == "EquatableSafeClosure"
+                return attributeName == "EquatableIgnored" || Self.skippablePropertyWrappers.contains(attributeName)
+            }
+            return false
+        }
+    }
+
+    private static func isStatic(_ varDecl: VariableDeclSyntax) -> Bool {
+        varDecl.modifiers.contains { modifier in
+            modifier.name.tokenKind == .keyword(.static)
+        }
+    }
+
+    private static func isMarkedWithEquatableIgnoredUnsafeClosure(_ varDecl: VariableDeclSyntax) -> Bool {
+        varDecl.attributes.contains(where: { attribute in
+            if let attributeName = attribute.as(AttributeSyntax.self)?.attributeName.as(IdentifierTypeSyntax.self)?.name.text {
+                return attributeName == "EquatableIgnoredUnsafeClosure"
             }
 
             return false
         })
     }
 
-    private static func typeComplexity(_ type: TypeSyntax?) -> Int {
-        guard let type = type else { return 100 } // Unknown types go last
+    private static func compare(lhs: (name: String, type: TypeSyntax?), rhs: (name: String, type: TypeSyntax?)) -> Bool {
+        // "id" always comes first
+        if lhs.name == "id" { return true }
+        if rhs.name == "id" { return false }
 
-        let typeString = type.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lhsComplexity = typeComplexity(lhs.type)
+        let rhsComplexity = typeComplexity(rhs.type)
+
+        if lhsComplexity == rhsComplexity {
+            return lhs.name < rhs.name
+        }
+        return lhsComplexity < rhsComplexity
+    }
+
+    // swiftlint:disable:next cyclomatic_complexity
+    private static func typeComplexity(_ type: TypeSyntax?) -> Int {
+        guard let type else { return 100 } // Unknown types go last
+
+        let typeString = type.description.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 
         switch typeString {
         case "Bool": return 1
@@ -214,11 +226,11 @@ public struct EquatableMacro: ExtensionMacro {
                 }
             }
 
-            if typeString.hasPrefix("[") && typeString.hasSuffix("]") {
+            if typeString.hasPrefix("["), typeString.hasSuffix("]") {
                 return 30
             }
 
-            if typeString.contains(":") && typeString.hasPrefix("[") {
+            if typeString.contains(":"), typeString.hasPrefix("[") {
                 return 40
             }
 
@@ -230,7 +242,7 @@ public struct EquatableMacro: ExtensionMacro {
         let attribute = AttributeSyntax(
             leadingTrivia: .space,
             atSign: .atSignToken(),
-            attributeName: IdentifierTypeSyntax(name: .identifier("EquatableSafeClosure")),
+            attributeName: IdentifierTypeSyntax(name: .identifier("EquatableIgnoredUnsafeClosure")),
             trailingTrivia: .space
         )
         let existingAttributes = varDecl.attributes
@@ -240,7 +252,16 @@ public struct EquatableMacro: ExtensionMacro {
             node: varDecl,
             message: MacroExpansionErrorMessage("Arbitary closures are not supported in @Equatable"),
             fixIt: .replace(
-                message: SimpleFixItMessage(message: "Consider marking the closure with @EquatableSafeClosure if it doesn't effect the view's body output.", fixItID: .init(domain: "", id: "test")),
+                message: SimpleFixItMessage(
+                    message: """
+                    Consider marking the closure with\
+                    @EquatableIgnoredUnsafeClosure if it doesn't effect the view's body output.
+                    """,
+                    fixItID: .init(
+                        domain: "",
+                        id: "test"
+                    )
+                ),
                 oldNode: varDecl,
                 newNode: fixedDecl
             )
@@ -255,7 +276,7 @@ struct EquatablePlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         EquatableMacro.self,
         EquatableIgnoredMacro.self,
-        EquatableSafeClosureMacro.self
+        EquatableIgnoredUnsafeClosureMacro.self
     ]
 }
 

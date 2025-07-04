@@ -1,8 +1,8 @@
 import SwiftCompilerPlugin
+import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
-import SwiftDiagnostics
 
 /// A peer macro that marks properties to be ignored in `Equatable` conformance generation.
 ///
@@ -29,7 +29,7 @@ public struct EquatableIgnoredMacro: PeerMacro {
         providingPeersOf declaration: some DeclSyntaxProtocol,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
-        guard let varDecl  = declaration.as(VariableDeclSyntax.self),
+        guard let varDecl = declaration.as(VariableDeclSyntax.self),
               let binding = varDecl.bindings.first
         else {
             let diagnostic = Diagnostic(
@@ -51,7 +51,7 @@ public struct EquatableIgnoredMacro: PeerMacro {
         }
 
         // Should not be applied to @Binding
-        let hasBinding  = varDecl.attributes.contains { attribute in
+        let hasBinding = varDecl.attributes.contains { attribute in
             if let attributeName = attribute.as(AttributeSyntax.self)?.attributeName.as(IdentifierTypeSyntax.self)?.name.text {
                 return attributeName == "Binding"
             }

@@ -1,69 +1,8 @@
-/// A macro that automatically generates an `Equatable` conformance for structs.
-///
-/// This macro creates a standard equality implementation by comparing all stored properties
-/// that aren't explicitly marked to be skipped with `@EquatableIgnored.
-/// Properties with SwiftUI property wrappers (like `@State`, `@ObservedObject`, etc.)
-///
-/// Structs with arbitary closures are not supported unless they are marked explicitly with `@EquatableIgnoredUnsafeClosure` -
-/// meaning that they are safe because they don't  influence rendering of the view's body.
-///
-/// Usage:
-/// ```swift
-/// import SwiftUI
-///
-/// @Equatable
-/// struct ProfileView: View {
-///     var username: String   // Will be compared
-///     @State private var isLoading = false           // Automatically skipped
-///     @ObservedObject var viewModel: ProfileViewModel // Automatically skipped
-///     @EquatableIgnored var cachedValue: String? // This property will be excluded
-///     @EquatableIgnoredUnsafeClosure var onTap: () -> Void // This closure is safe and will be ignored in comparison
-///     let id: UUID // will be compared first for shortcircuiting equality checks
-///
-///     var body: some View {
-///         VStack {
-///             Text(username)
-///             if isLoading {
-///                 ProgressView()
-///             }
-///         }
-///     }
-/// }
-/// ```
-///
-/// The generated extension will implement the `==` operator with property comparisons
-/// ordered for optimal performance (e.g., IDs and simple types first):
-/// ```swift
-/// extension ProfileView: Equatable {
-///     nonisolated public static func == (lhs: ProfileView, rhs: ProfileView) -> Bool {
-///         lhs.id == rhs.id && lhs.username == rhs.username
-///     }
-/// }
-///
-@attached(extension, conformances: Equatable, names: named(==))
-public macro Equatable() = #externalMacro(module: "EquatableMacros", type: "EquatableMacro")
-
-/// A peer macro that marks properties to be ignored in `Equatable` conformance generation.
-///
-/// This macro allows developers to explicitly exclude specific properties from the equality comparison
-/// when using the `@Equatable` macro. It performs validation to ensure it's used correctly.
-///
-/// Usage:
-/// ```swift
-/// @Equatable
-/// struct User {
-///     let id: UUID
-///     let name: String
-///     @EquatableIgnored var temporaryCache: [String: Any] // This property will be excluded
-/// }
-/// ```
-///
-/// This macro cannot be applied to:
-/// - Non-property declarations
-/// - Closure properties
-/// - Properties already marked with `@Binding`
-@attached(peer)
-public macro EquatableIgnored() = #externalMacro(module: "EquatableMacros", type: "EquatableIgnoredMacro")
+import SwiftCompilerPlugin
+import SwiftDiagnostics
+import SwiftSyntax
+import SwiftSyntaxBuilder
+import SwiftSyntaxMacros
 
 /// A macro that makes closure properties safely participate in `Equatable` conformance.
 ///
@@ -144,5 +83,34 @@ public macro EquatableIgnored() = #externalMacro(module: "EquatableMacros", type
 /// ## Requirements
 ///
 /// - The decorated property must be a closure type
-@attached(peer)
-public macro EquatableIgnoredUnsafeClosure() = #externalMacro(module: "EquatableMacros", type: "EquatableIgnoredUnsafeClosureMacro")
+public struct EquatableIgnoredUnsafeClosureMacro: PeerMacro {
+    public static func expansion(
+        of node: AttributeSyntax,
+        providingPeersOf declaration: some DeclSyntaxProtocol,
+        in context: some MacroExpansionContext
+    ) throws -> [DeclSyntax] {
+        guard let varDecl = declaration.as(VariableDeclSyntax.self),
+              let binding = varDecl.bindings.first
+        else {
+            let diagnostic = Diagnostic(
+                node: node,
+                message: MacroExpansionErrorMessage("@EquatableIgnoredUnsafeClosure can only be applied to properties")
+            )
+            context.diagnose(diagnostic)
+            return []
+        }
+
+        if let typeAnnotation = binding.typeAnnotation?.type {
+            if !isClosure(type: typeAnnotation) {
+                let diagnostic = Diagnostic(
+                    node: node,
+                    message: MacroExpansionErrorMessage("@EquatableIgnoredUnsafeClosure can only be applied to closures")
+                )
+                context.diagnose(diagnostic)
+                return []
+            }
+        }
+
+        return []
+    }
+}
