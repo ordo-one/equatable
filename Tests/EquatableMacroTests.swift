@@ -1,3 +1,4 @@
+// swiftlint:disable all
 import EquatableMacros
 import MacroTesting
 import Testing
@@ -13,7 +14,8 @@ import Testing
     )
 )
 struct EquatableMacroTests {
-    @Test func idIsComparedFirst() async throws {
+    @Test
+    func idIsComparedFirst() async throws {
         assertMacro {
             """
             @Equatable
@@ -42,7 +44,8 @@ struct EquatableMacroTests {
         }
     }
 
-    @Test func basicTypesComparedBeforeComplex() async throws {
+    @Test
+    func basicTypesComparedBeforeComplex() async throws {
         assertMacro {
             """
             struct NestedType: Equatable {
@@ -78,7 +81,8 @@ struct EquatableMacroTests {
         }
     }
 
-    @Test func swiftUIWrappedPropertiesSkipped() async throws {
+    @Test
+    func swiftUIWrappedPropertiesSkipped() async throws {
         assertMacro {
             """
             @Equatable
@@ -125,7 +129,8 @@ struct EquatableMacroTests {
         }
     }
 
-    @Test func markedWithEquatableIgnoredSkipped() async throws {
+    @Test
+    func markedWithEquatableIgnoredSkipped() async throws {
         assertMacro {
             """
             @Equatable
@@ -164,7 +169,8 @@ struct EquatableMacroTests {
         }
     }
 
-    @Test func equatableIgnoredCannotBeAppliedToClosures() async throws {
+    @Test
+    func equatableIgnoredCannotBeAppliedToClosures() async throws {
         assertMacro {
             """
             struct CustomView: View {
@@ -192,7 +198,8 @@ struct EquatableMacroTests {
         }
     }
 
-    @Test func equatableIgnoredCannotBeAppliedToBindings() async throws {
+    @Test
+    func equatableIgnoredCannotBeAppliedToBindings() async throws {
         assertMacro {
             """
             @Equatable
@@ -222,7 +229,8 @@ struct EquatableMacroTests {
         }
     }
 
-    @Test func arbitaryClosuresNotAllowed() async throws {
+    @Test
+    func arbitaryClosuresNotAllowed() async throws {
         // There is a bug in assertMacro somewhere and it produces the fixit with
         //
         //        @Equatable
@@ -255,7 +263,7 @@ struct EquatableMacroTests {
                 let closure: (() -> Void)?
                 ┬─────────────────────────
                 ╰─ 🛑 Arbitary closures are not supported in @Equatable
-                   ✏️ Consider marking the closure with @EquatableIgnoredUnsafeClosure if it doesn't effect the view's body output.
+                   ✏️ Consider marking the closure with@EquatableIgnoredUnsafeClosure if it doesn't effect the view's body output.
 
                 var body: some View {
                     Text("CustomView")
@@ -294,7 +302,8 @@ struct EquatableMacroTests {
         }
     }
 
-    @Test func closuresMarkedWithEquatableIgnoredUnsafeClosure() async throws {
+    @Test
+    func closuresMarkedWithEquatableIgnoredUnsafeClosure() async throws {
         assertMacro {
             """
             @Equatable
@@ -327,7 +336,8 @@ struct EquatableMacroTests {
         }
     }
 
-    @Test func noEquatableProperties() async throws {
+    @Test
+    func noEquatableProperties() async throws {
         assertMacro {
             """
             @Equatable
@@ -357,7 +367,8 @@ struct EquatableMacroTests {
         }
     }
 
-    @Test func equatableMacro() async throws {
+    @Test
+    func equatableMacro() async throws {
         assertMacro {
             """
             struct CustomType: Equatable {
@@ -445,7 +456,8 @@ struct EquatableMacroTests {
         }
     }
 
-    @Test func cannotBeAppliedToNonStruct() async throws {
+    @Test
+    func cannotBeAppliedToNonStruct() async throws {
         assertMacro {
             """
             @Equatable
@@ -465,3 +477,4 @@ struct EquatableMacroTests {
         }
     }
 }
+// swiftlint:enable all

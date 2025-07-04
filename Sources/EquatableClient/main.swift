@@ -12,8 +12,7 @@ struct MyView: View {
 @Equatable
 struct Test {
     let name: String
-    @EquatableIgnoredUnsafeClosure
-    let closure: (() -> Void)?
+    @EquatableIgnoredUnsafeClosure let closure: (() -> Void)?
 }
 
 struct CustomType: Equatable {
@@ -59,8 +58,7 @@ struct Person {
     let lastName: String
     let random: String
     let id: UUID
-    @EquatableIgnoredUnsafeClosure
-    let closure: (() -> Void)?
+    @EquatableIgnoredUnsafeClosure let closure: (() -> Void)?
 }
 
 struct NestedType: Equatable {
@@ -68,7 +66,7 @@ struct NestedType: Equatable {
 }
 
 @Equatable
-struct A {
+struct Anon {
     let nestedType: NestedType
     let array: [Int]
     let basicInt: Int
@@ -81,7 +79,8 @@ final class TitleDataModel {}
 @Equatable
 struct TitleView: View {
     @State var dataModel = TitleDataModel()
-    @Environment(\.colorScheme) var colorScheme
+    @Environment(\.colorScheme)
+    var colorScheme
     let title: String
 
     var body: some View {

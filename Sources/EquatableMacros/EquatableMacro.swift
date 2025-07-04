@@ -58,6 +58,7 @@ public struct EquatableMacro: ExtensionMacro {
         "AppStorage"
     ]
 
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     public static func expansion(
         of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
@@ -85,23 +86,12 @@ public struct EquatableMacro: ExtensionMacro {
             }
 
             // Skip properties with SwiftUI attributes (like @State, @Binding, etc.) or if they are marked with @EqutableIgnored
-            let shouldSkip = varDecl.attributes.contains { attribute in
-                if let attributeName = attribute.as(AttributeSyntax.self)?.attributeName.as(IdentifierTypeSyntax.self)?.name.text {
-                    return attributeName == "EquatableIgnored" || Self.skippablePropertyWrappers.contains(attributeName)
-                }
-                return false
-            }
-
-            if shouldSkip {
+            if Self.shouldShip(varDecl) {
                 return nil
             }
 
             // Skip static properties
-            let isStatic = varDecl.modifiers.contains { modifier in
-                modifier.name.tokenKind == .keyword(.static)
-            }
-
-            if isStatic {
+            if Self.isStatic(varDecl) {
                 return nil
             }
 
@@ -138,17 +128,7 @@ public struct EquatableMacro: ExtensionMacro {
 
         // Sort properties: "id" first, then by type complexity
         let sortedProperties = storedProperties.sorted { lhs, rhs in
-            // "id" always comes first
-            if lhs.name == "id" { return true }
-            if rhs.name == "id" { return false }
-
-            let lhsComplexity = typeComplexity(lhs.type)
-            let rhsComplexity = typeComplexity(rhs.type)
-
-            if lhsComplexity == rhsComplexity {
-                return lhs.name < rhs.name
-            }
-            return lhsComplexity < rhsComplexity
+            return Self.compare(lhs: lhs, rhs: rhs)
         }
 
         guard !storedProperties.isEmpty else {
@@ -181,6 +161,22 @@ public struct EquatableMacro: ExtensionMacro {
         return [extensionSyntax]
     }
 
+    // Skip properties with SwiftUI attributes (like @State, @Binding, etc.) or if they are marked with @EqutableIgnored
+    private static func shouldShip(_ varDecl: VariableDeclSyntax) -> Bool {
+        varDecl.attributes.contains { attribute in
+            if let attributeName = attribute.as(AttributeSyntax.self)?.attributeName.as(IdentifierTypeSyntax.self)?.name.text {
+                return attributeName == "EquatableIgnored" || Self.skippablePropertyWrappers.contains(attributeName)
+            }
+            return false
+        }
+    }
+
+    private static func isStatic(_ varDecl: VariableDeclSyntax) -> Bool {
+        varDecl.modifiers.contains { modifier in
+            modifier.name.tokenKind == .keyword(.static)
+        }
+    }
+
     private static func isMarkedWithEquatableIgnoredUnsafeClosure(_ varDecl: VariableDeclSyntax) -> Bool {
         varDecl.attributes.contains(where: { attribute in
             if let attributeName = attribute.as(AttributeSyntax.self)?.attributeName.as(IdentifierTypeSyntax.self)?.name.text {
@@ -191,6 +187,21 @@ public struct EquatableMacro: ExtensionMacro {
         })
     }
 
+    private static func compare(lhs: (name: String, type: TypeSyntax?), rhs: (name: String, type: TypeSyntax?)) -> Bool {
+        // "id" always comes first
+        if lhs.name == "id" { return true }
+        if rhs.name == "id" { return false }
+
+        let lhsComplexity = typeComplexity(lhs.type)
+        let rhsComplexity = typeComplexity(rhs.type)
+
+        if lhsComplexity == rhsComplexity {
+            return lhs.name < rhs.name
+        }
+        return lhsComplexity < rhsComplexity
+    }
+
+    // swiftlint:disable:next cyclomatic_complexity
     private static func typeComplexity(_ type: TypeSyntax?) -> Int {
         guard let type else { return 100 } // Unknown types go last
 
@@ -240,7 +251,16 @@ public struct EquatableMacro: ExtensionMacro {
             node: varDecl,
             message: MacroExpansionErrorMessage("Arbitary closures are not supported in @Equatable"),
             fixIt: .replace(
-                message: SimpleFixItMessage(message: "Consider marking the closure with @EquatableIgnoredUnsafeClosure if it doesn't effect the view's body output.", fixItID: .init(domain: "", id: "test")),
+                message: SimpleFixItMessage(
+                    message: """
+                    Consider marking the closure with\
+                    @EquatableIgnoredUnsafeClosure if it doesn't effect the view's body output.
+                    """,
+                    fixItID: .init(
+                        domain: "",
+                        id: "test"
+                    )
+                ),
                 oldNode: varDecl,
                 newNode: fixedDecl
             )
