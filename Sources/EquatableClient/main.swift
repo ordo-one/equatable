@@ -1,4 +1,5 @@
 import Equatable
+#if canImport(SwiftUI)
 import SwiftUI
 
 struct MyView: View {
@@ -120,3 +121,4 @@ struct ProfileView: View {
         }
     }
 }
+#endif

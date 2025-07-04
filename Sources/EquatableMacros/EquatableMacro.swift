@@ -1,3 +1,4 @@
+import Foundation
 import SwiftCompilerPlugin
 import SwiftDiagnostics
 import SwiftSyntax
@@ -205,7 +206,7 @@ public struct EquatableMacro: ExtensionMacro {
     private static func typeComplexity(_ type: TypeSyntax?) -> Int {
         guard let type else { return 100 } // Unknown types go last
 
-        let typeString = type.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        let typeString = type.description.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 
         switch typeString {
         case "Bool": return 1
