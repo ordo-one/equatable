@@ -1,6 +1,7 @@
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fordo-one%2Fequatable%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/ordo-one/equatable)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fordo-one%2Fequatable%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/ordo-one/equatable)
+
 [![codecov](https://codecov.io/github/ordo-one/equatable/graph/badge.svg?token=pqcp4akVCV)](https://codecov.io/github/ordo-one/equatable)
-[![Swift address sanitizer](https://github.com/ordo-one/equatable/actions/workflows/swift-sanitizer-address.yml/badge.svg)](https://github.com/ordo-one/equatable/actions/workflows/swift-sanitizer-address.yml)
-[![Swift thread sanitizer](https://github.com/ordo-one/equatable/actions/workflows/swift-sanitizer-thread.yml/badge.svg)](https://github.com/ordo-one/equatable/actions/workflows/swift-sanitizer-thread.yml)
 [![Swift Linux build](https://github.com/ordo-one/equatable/actions/workflows/swift-linux-build.yml/badge.svg)](https://github.com/ordo-one/equatable/actions/workflows/swift-linux-build.yml)
 [![Swift macOS build](https://github.com/ordo-one/equatable/actions/workflows/swift-macos-build.yml/badge.svg)](https://github.com/ordo-one/equatable/actions/workflows/swift-macos-build.yml)
 
@@ -10,7 +11,7 @@ A Swift package that provides macros for generating `Equatable` conformances for
 
 ## Overview
 
-The @Equatable macro generates an `Equatable` implementation that compares all of the struct's stored instance properties, excluding properties with SwiftUI property wrappers like @State and @Environment that trigger view updates through other mechanisms. Properties that aren't `Equatable` and don't affect the output of the view body can be marked with `@EquatableIgnored` to exclude them from the generated implementation. Closures are not permitted by default but can be marked with `@EquatableIgnoredUnsafeClosure` to indicate that they are safe to exclude from equality checks.
+The `@Equatable` macro generates an `Equatable` implementation that compares all of the struct's stored instance properties, excluding properties with SwiftUI property wrappers like @State and @Environment that trigger view updates through other mechanisms. Properties that aren't `Equatable` and don't affect the output of the view body can be marked with `@EquatableIgnored` to exclude them from the generated implementation. Closures are not permitted by default but can be marked with `@EquatableIgnoredUnsafeClosure` to indicate that they are safe to exclude from equality checks.
 
 ## Installation
 
