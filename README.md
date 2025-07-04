@@ -1,3 +1,9 @@
+[![codecov](https://codecov.io/github/ordo-one/equatable/graph/badge.svg?token=pqcp4akVCV)](https://codecov.io/github/ordo-one/equatable)
+[![Swift address sanitizer](https://github.com/ordo-one/equatable/actions/workflows/swift-sanitizer-address.yml/badge.svg)](https://github.com/ordo-one/equatable/actions/workflows/swift-sanitizer-address.yml)
+[![Swift thread sanitizer](https://github.com/ordo-one/equatable/actions/workflows/swift-sanitizer-thread.yml/badge.svg)](https://github.com/ordo-one/equatable/actions/workflows/swift-sanitizer-thread.yml)
+[![Swift Linux build](https://github.com/ordo-one/equatable/actions/workflows/swift-linux-build.yml/badge.svg)](https://github.com/ordo-one/equatable/actions/workflows/swift-linux-build.yml)
+[![Swift macOS build](https://github.com/ordo-one/equatable/actions/workflows/swift-macos-build.yml/badge.svg)](https://github.com/ordo-one/equatable/actions/workflows/swift-macos-build.yml)
+
 # Equatable Macros
 
 A Swift package that provides macros for generating `Equatable` conformances for structs.
