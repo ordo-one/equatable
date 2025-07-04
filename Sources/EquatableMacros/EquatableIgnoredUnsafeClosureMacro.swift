@@ -1,8 +1,8 @@
 import SwiftCompilerPlugin
+import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
-import SwiftDiagnostics
 
 /// A macro that makes closure properties safely participate in `Equatable` conformance.
 ///
@@ -89,7 +89,7 @@ public struct EquatableIgnoredUnsafeClosureMacro: PeerMacro {
         providingPeersOf declaration: some DeclSyntaxProtocol,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
-        guard let varDecl  = declaration.as(VariableDeclSyntax.self),
+        guard let varDecl = declaration.as(VariableDeclSyntax.self),
               let binding = varDecl.bindings.first
         else {
             let diagnostic = Diagnostic(

@@ -1,8 +1,8 @@
 import SwiftCompilerPlugin
+import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
-import SwiftDiagnostics
 
 /// A macro that automatically generates an `Equatable` conformance for structs.
 ///
@@ -62,7 +62,7 @@ public struct EquatableMacro: ExtensionMacro {
         of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
         providingExtensionsOf type: some TypeSyntaxProtocol,
-        conformingTo protocols: [TypeSyntax],
+        conformingTo _: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
         // Ensure we're attached to a struct
@@ -167,12 +167,12 @@ public struct EquatableMacro: ExtensionMacro {
         let equalityImplementation = comparisons.isEmpty ? "true" : comparisons
 
         let extensionDecl: DeclSyntax = """
-            extension \(type): Equatable {
-                nonisolated public static func == (lhs: \(type), rhs: \(type)) -> Bool {
-                    \(raw: equalityImplementation)
-                }
+        extension \(type): Equatable {
+            nonisolated public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                \(raw: equalityImplementation)
             }
-            """
+        }
+        """
 
         guard let extensionSyntax = extensionDecl.as(ExtensionDeclSyntax.self) else {
             return []
@@ -182,7 +182,7 @@ public struct EquatableMacro: ExtensionMacro {
     }
 
     private static func isMarkedWithEquatableIgnoredUnsafeClosure(_ varDecl: VariableDeclSyntax) -> Bool {
-        return varDecl.attributes.contains(where: { attribute in
+        varDecl.attributes.contains(where: { attribute in
             if let attributeName = attribute.as(AttributeSyntax.self)?.attributeName.as(IdentifierTypeSyntax.self)?.name.text {
                 return attributeName == "EquatableIgnoredUnsafeClosure"
             }
@@ -192,7 +192,7 @@ public struct EquatableMacro: ExtensionMacro {
     }
 
     private static func typeComplexity(_ type: TypeSyntax?) -> Int {
-        guard let type = type else { return 100 } // Unknown types go last
+        guard let type else { return 100 } // Unknown types go last
 
         let typeString = type.description.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -214,11 +214,11 @@ public struct EquatableMacro: ExtensionMacro {
                 }
             }
 
-            if typeString.hasPrefix("[") && typeString.hasSuffix("]") {
+            if typeString.hasPrefix("["), typeString.hasSuffix("]") {
                 return 30
             }
 
-            if typeString.contains(":") && typeString.hasPrefix("[") {
+            if typeString.contains(":"), typeString.hasPrefix("[") {
                 return 40
             }
 

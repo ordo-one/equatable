@@ -1,5 +1,5 @@
-import SwiftUI
 import Equatable
+import SwiftUI
 
 struct MyView: View {
     let int: Int
@@ -15,7 +15,6 @@ struct Test {
     @EquatableIgnoredUnsafeClosure
     let closure: (() -> Void)?
 }
-
 
 struct CustomType: Equatable {
     let name: String
@@ -43,7 +42,6 @@ struct ContentView: View {
     @EquatableIgnoredUnsafeClosure let onTapOptional: (() -> Void)?
     @EquatableIgnoredUnsafeClosure let onTap: () -> Void
 
-
     var body: some View {
         VStack {
             Text("Hello!")
@@ -62,7 +60,8 @@ struct Person {
     let random: String
     let id: UUID
     @EquatableIgnoredUnsafeClosure
-    let closure: (() -> Void)?}
+    let closure: (() -> Void)?
+}
 
 struct NestedType: Equatable {
     let nestedInt: Int
@@ -75,8 +74,6 @@ struct A {
     let basicInt: Int
     let basicString: String
 }
-
-
 
 @Observable
 final class TitleDataModel {}
@@ -92,7 +89,6 @@ struct TitleView: View {
     }
 }
 
-
 @Equatable
 struct BandView: View {
     @EquatableIgnoredUnsafeClosure let onTap: () -> Void
@@ -106,13 +102,12 @@ struct BandView: View {
     }
 }
 
-
 final class ProfileViewModel: ObservableObject {}
 
 @Equatable
 struct ProfileView: View {
-    var username: String   // Will be compared
-    @State private var isLoading = false           // Automatically skipped
+    var username: String // Will be compared
+    @State private var isLoading = false // Automatically skipped
     @ObservedObject var viewModel: ProfileViewModel // Automatically skipped
     @EquatableIgnored var cachedValue: String? // This property will be excluded
     @EquatableIgnoredUnsafeClosure var onTap: () -> Void // This closure is safe and will be ignored in comparison
