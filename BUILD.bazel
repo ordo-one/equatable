@@ -1,0 +1,21 @@
+load("@rules_swift//swift:swift_compiler_plugin.bzl", "swift_compiler_plugin")
+load("@rules_swift//swift:swift_library.bzl", "swift_library")
+
+swift_library(
+    name = "Equatable",
+    package_name = "Equatable",
+    srcs = glob(["Sources/Equatable/**/*.swift"]),
+    plugins = [":EquatableMacros"],
+    visibility = ["//visibility:public"],
+)
+
+swift_compiler_plugin(
+    name = "EquatableMacros",
+    package_name = "Equatable",
+    srcs = glob(["Sources/EquatableMacros/**/*.swift"]),
+    deps = [
+        "@swift-syntax//:SwiftCompilerPlugin",
+        "@swift-syntax//:SwiftSyntax",
+        "@swift-syntax//:SwiftSyntaxMacros",
+    ],
+)
