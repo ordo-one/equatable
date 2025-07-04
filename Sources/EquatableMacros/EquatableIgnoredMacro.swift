@@ -29,7 +29,7 @@ public struct EquatableIgnoredMacro: PeerMacro {
         providingPeersOf declaration: some DeclSyntaxProtocol,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
-        guard let varDecl  = declaration.as(VariableDeclSyntax.self),
+        guard let varDecl = declaration.as(VariableDeclSyntax.self),
               let binding = varDecl.bindings.first
         else {
             let diagnostic = Diagnostic(
