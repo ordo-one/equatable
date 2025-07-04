@@ -38,6 +38,9 @@ Then add the dependency to your target:
 Apply the `@Equatable` macro to structs to automatically generate `Equatable` conformance:
 
 ```swift
+import Equatable
+import SwiftUI
+
 @Equatable
 struct ProfileView: View {
     var username: String   // Will be compared
