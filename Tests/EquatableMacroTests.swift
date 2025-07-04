@@ -266,7 +266,7 @@ struct EquatableMacroTests {
             """
             @Equatable
             struct CustomView: View {
-                var name: String @EquatableIgnoredUnsafeClosure
+                var name: String @EquatableIgnoredUnsafeClosure 
                 let closure: (() -> Void)?
 
                 var body: some View {
@@ -277,7 +277,7 @@ struct EquatableMacroTests {
         } expansion: {
             """
             struct CustomView: View {
-                var name: String
+                var name: String 
                 let closure: (() -> Void)?
 
                 var body: some View {
