@@ -2,8 +2,6 @@
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fordo-one%2Fequatable%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/ordo-one/equatable)
 
 [![codecov](https://codecov.io/github/ordo-one/equatable/graph/badge.svg?token=pqcp4akVCV)](https://codecov.io/github/ordo-one/equatable)
-[![Swift Linux build](https://github.com/ordo-one/equatable/actions/workflows/swift-linux-build.yml/badge.svg)](https://github.com/ordo-one/equatable/actions/workflows/swift-linux-build.yml)
-[![Swift macOS build](https://github.com/ordo-one/equatable/actions/workflows/swift-macos-build.yml/badge.svg)](https://github.com/ordo-one/equatable/actions/workflows/swift-macos-build.yml)
 
 # Equatable Macros
 
