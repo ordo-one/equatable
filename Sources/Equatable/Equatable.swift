@@ -9,6 +9,7 @@
 ///
 /// Usage:
 /// ```swift
+/// import Equatable
 /// import SwiftUI
 ///
 /// @Equatable
