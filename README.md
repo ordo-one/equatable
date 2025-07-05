@@ -7,6 +7,14 @@
 
 A Swift package that provides macros for generating `Equatable` conformances for structs.
 
+## Why Use Equatable Macros?
+
+SwiftUI’s performance hinges on efficient view diffing—but the default behavior often falls short, especially with closures and complex view models. Manually writing Equatable conformances is tedious and error-prone.
+
+Equatable Macros solve this by generating optimized Equatable implementations for your SwiftUI views, ensuring accurate and performant diffing out of the box. They eliminate boilerplate, prevent regressions, and help you avoid unnecessary re-renders—boosting UI performance while keeping your codebase clean and maintainable.
+
+Ideal for teams scaling SwiftUI in large apps.
+
 ## Overview
 
 The `@Equatable` macro generates an `Equatable` implementation that compares all of the struct's stored instance properties, excluding properties with SwiftUI property wrappers like @State and @Environment that trigger view updates through other mechanisms. Properties that aren't `Equatable` and don't affect the output of the view body can be marked with `@EquatableIgnored` to exclude them from the generated implementation. Closures are not permitted by default but can be marked with `@EquatableIgnoredUnsafeClosure` to indicate that they are safe to exclude from equality checks.
