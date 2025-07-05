@@ -128,6 +128,54 @@ struct EquatableMacroTests {
             """
         }
     }
+    
+    @Test
+    func memberSwiftUIWrappedPropertiesSkipped() async throws {
+        assertMacro {
+            """
+            @Equatable
+            struct TitleView: View {
+                @SwiftUI.State var dataModel = TitleDataModel()
+                @SwiftUI.Environment(\\.colorScheme) var colorScheme
+                @SwiftUI.StateObject private var viewModel = TitleViewModel()
+                @SwiftUI.ObservedObject var anotherViewModel = AnotherViewModel()
+                @SwiftUI.FocusState var isFocused: Bool
+                @SwiftUI.SceneStorage("title") var title: String = "Default Title"
+                @SwiftUI.AppStorage("title") var appTitle: String = "App Title"
+                static let staticInt: Int = 42
+                let title: String
+
+                var body: some View {
+                    Text(title)
+                }
+            }
+            """
+        } expansion: {
+            """
+            struct TitleView: View {
+                @SwiftUI.State var dataModel = TitleDataModel()
+                @SwiftUI.Environment(\\.colorScheme) var colorScheme
+                @SwiftUI.StateObject private var viewModel = TitleViewModel()
+                @SwiftUI.ObservedObject var anotherViewModel = AnotherViewModel()
+                @SwiftUI.FocusState var isFocused: Bool
+                @SwiftUI.SceneStorage("title") var title: String = "Default Title"
+                @SwiftUI.AppStorage("title") var appTitle: String = "App Title"
+                static let staticInt: Int = 42
+                let title: String
+
+                var body: some View {
+                    Text(title)
+                }
+            }
+
+            extension TitleView: Equatable {
+                nonisolated public static func == (lhs: TitleView, rhs: TitleView) -> Bool {
+                    lhs.title == rhs.title
+                }
+            }
+            """
+        }
+    }
 
     @Test
     func markedWithEquatableIgnoredSkipped() async throws {

@@ -48,7 +48,7 @@ import SwiftSyntaxMacros
 /// }
 ///
 public struct EquatableMacro: ExtensionMacro {
-    private static let skippablePropertyWrappers = [
+    private static let skippablePropertyWrappers: Set = [
         "State",
         "StateObject",
         "ObservedObject",
@@ -87,7 +87,7 @@ public struct EquatableMacro: ExtensionMacro {
             }
 
             // Skip properties with SwiftUI attributes (like @State, @Binding, etc.) or if they are marked with @EqutableIgnored
-            if Self.shouldShip(varDecl) {
+            if Self.shouldSkip(varDecl) {
                 return nil
             }
 
@@ -163,13 +163,44 @@ public struct EquatableMacro: ExtensionMacro {
     }
 
     // Skip properties with SwiftUI attributes (like @State, @Binding, etc.) or if they are marked with @EqutableIgnored
-    private static func shouldShip(_ varDecl: VariableDeclSyntax) -> Bool {
+    private static func shouldSkip(_ varDecl: VariableDeclSyntax) -> Bool {
         varDecl.attributes.contains { attribute in
-            if let attributeName = attribute.as(AttributeSyntax.self)?.attributeName.as(IdentifierTypeSyntax.self)?.name.text {
-                return attributeName == "EquatableIgnored" || Self.skippablePropertyWrappers.contains(attributeName)
+            if let atribute = attribute.as(AttributeSyntax.self),
+               Self.shouldSkip(atribute: atribute) {
+                return true
             }
             return false
         }
+    }
+
+    private static func shouldSkip(atribute node: AttributeSyntax) -> Bool {
+        if let identifierType = node.attributeName.as(IdentifierTypeSyntax.self),
+           Self.shouldSkip(identifierType: identifierType) {
+            return true
+        }
+        if let memberType = node.attributeName.as(MemberTypeSyntax.self),
+           Self.shouldSkip(memberType: memberType) {
+            return true
+        }
+        return false
+    }
+
+    private static func shouldSkip(identifierType node: IdentifierTypeSyntax) -> Bool {
+        if node.name.text == "EquatableIgnored" {
+            return true
+        }
+        if Self.skippablePropertyWrappers.contains(node.name.text) {
+            return true
+        }
+        return false
+    }
+
+    private static func shouldSkip(memberType node: MemberTypeSyntax) -> Bool {
+        if node.baseType.as(IdentifierTypeSyntax.self)?.name.text == "SwiftUI",
+           Self.skippablePropertyWrappers.contains(node.name.text) {
+            return true
+        }
+        return false
     }
 
     private static func isStatic(_ varDecl: VariableDeclSyntax) -> Bool {
