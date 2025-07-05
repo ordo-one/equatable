@@ -1,0 +1,9 @@
+module(
+    name = "swift_equatable_macro",
+    version = "0",
+    bazel_compatibility = [">=7.0.0"],
+    compatibility_level = 1,
+)
+
+bazel_dep(name = "rules_swift", version = "3.0.2")
+bazel_dep(name = "swift-syntax", version = "601.0.1.1")
