@@ -226,11 +226,11 @@ public struct EquatableMacro: ExtensionMacro {
                 }
             }
 
-            if typeString.hasPrefix("["), typeString.hasSuffix("]") {
+            if type.isArray {
                 return 30
             }
 
-            if typeString.contains(":"), typeString.hasPrefix("[") {
+            if type.isDictionary {
                 return 40
             }
 
@@ -283,4 +283,90 @@ struct EquatablePlugin: CompilerPlugin {
 struct SimpleFixItMessage: FixItMessage {
     let message: String
     let fixItID: MessageID
+}
+
+extension TypeSyntax {
+    var isSwift: Bool {
+        if self.as(IdentifierTypeSyntax.self)?.isSwift ?? false {
+            return true
+        }
+        return false
+    }
+}
+
+extension TypeSyntax {
+    var isArray: Bool {
+        if self.is(ArrayTypeSyntax.self) {
+            return true
+        }
+        if self.as(IdentifierTypeSyntax.self)?.isArray ?? false {
+            return true
+        }
+        if self.as(MemberTypeSyntax.self)?.isArray ?? false {
+            return true
+        }
+        return false
+    }
+}
+
+extension IdentifierTypeSyntax {
+    var isSwift: Bool {
+        if self.name.text == "Swift" {
+            return true
+        }
+        return false
+    }
+}
+
+extension IdentifierTypeSyntax {
+    var isArray: Bool {
+        if self.name.text == "Array" {
+            return true
+        }
+        return false
+    }
+}
+
+extension IdentifierTypeSyntax {
+    var isDictionary: Bool {
+        if self.name.text == "Dictionary" {
+            return true
+        }
+        return false
+    }
+}
+
+extension MemberTypeSyntax {
+    var isArray: Bool {
+        if self.baseType.isSwift,
+           self.name.text == "Array" {
+            return true
+        }
+        return false
+    }
+}
+
+extension MemberTypeSyntax {
+    var isDictionary: Bool {
+        if self.baseType.isSwift,
+           self.name.text == "Dictionary" {
+            return true
+        }
+        return false
+    }
+}
+
+extension TypeSyntax {
+    var isDictionary: Bool {
+        if self.is(DictionaryTypeSyntax.self) {
+            return true
+        }
+        if self.as(IdentifierTypeSyntax.self)?.isDictionary ?? false {
+            return true
+        }
+        if self.as(MemberTypeSyntax.self)?.isDictionary ?? false {
+            return true
+        }
+        return false
+    }
 }

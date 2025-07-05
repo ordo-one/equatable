@@ -476,5 +476,81 @@ struct EquatableMacroTests {
             """
         }
     }
+
+    @Test
+    func arrayProperties() async throws {
+        assertMacro {
+            """
+            @Equatable
+            struct Person {
+                struct NestedType: Equatable {
+                    let nestedInt: Int
+                }
+                let name: String
+                let first: [Int]
+                let second: Array<Int>
+                let third: Swift.Array<Int>
+                let nestedType: NestedType
+            }
+            """
+        } expansion: {
+            """
+            struct Person {
+                struct NestedType: Equatable {
+                    let nestedInt: Int
+                }
+                let name: String
+                let first: [Int]
+                let second: Array<Int>
+                let third: Swift.Array<Int>
+                let nestedType: NestedType
+            }
+
+            extension Person: Equatable {
+                nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
+                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
+                }
+            }
+            """
+        }
+    }
+
+    @Test
+    func dictionaryProperties() async throws {
+        assertMacro {
+            """
+            @Equatable
+            struct Person {
+                struct NestedType: Equatable {
+                    let nestedInt: Int
+                }
+                let name: String
+                let first: [Int:Int]
+                let second: Dictionary<Int, Int>
+                let third: Swift.Dictionary<Int, Int>
+                let nestedType: NestedType
+            }
+            """
+        } expansion: {
+            """
+            struct Person {
+                struct NestedType: Equatable {
+                    let nestedInt: Int
+                }
+                let name: String
+                let first: [Int:Int]
+                let second: Dictionary<Int, Int>
+                let third: Swift.Dictionary<Int, Int>
+                let nestedType: NestedType
+            }
+
+            extension Person: Equatable {
+                nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
+                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
+                }
+            }
+            """
+        }
+    }
 }
 // swiftlint:enable all
