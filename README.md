@@ -126,7 +126,7 @@ struct Content: View {
         })
     }
 }
-@Equabable
+@Equatable
 struct ViewTakesClosure: View {
     let label: String
     @EquatableIgnoredUnsafeClosure let onTapGesture: () -> Void
