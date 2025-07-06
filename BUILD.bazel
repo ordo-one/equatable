@@ -5,6 +5,7 @@ swift_library(
     name = "Equatable",
     package_name = "Equatable",
     srcs = glob(["Sources/Equatable/**/*.swift"]),
+    module_name = "Equatable",
     plugins = [":EquatableMacros"],
     visibility = ["//visibility:public"],
 )
@@ -13,6 +14,7 @@ swift_compiler_plugin(
     name = "EquatableMacros",
     package_name = "Equatable",
     srcs = glob(["Sources/EquatableMacros/**/*.swift"]),
+    module_name = "EquatableMacros",
     deps = [
         "@swift-syntax//:SwiftCompilerPlugin",
         "@swift-syntax//:SwiftSyntax",
