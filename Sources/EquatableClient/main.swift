@@ -121,4 +121,11 @@ struct ProfileView: View {
         }
     }
 }
+
+@Equatable
+struct User: Hashable {
+    let id: Int
+    @EquatableIgnored var name = ""
+}
+
 #endif

@@ -141,25 +141,28 @@ public struct EquatableMacro: ExtensionMacro {
             return []
         }
 
-        let comparisons = sortedProperties.map { property in
-            "lhs.\(property.name) == rhs.\(property.name)"
-        }.joined(separator: " && ")
-
-        let equalityImplementation = comparisons.isEmpty ? "true" : comparisons
-
-        let extensionDecl: DeclSyntax = """
-        extension \(type): Equatable {
-            nonisolated public static func == (lhs: \(type), rhs: \(type)) -> Bool {
-                \(raw: equalityImplementation)
-            }
-        }
-        """
-
-        guard let extensionSyntax = extensionDecl.as(ExtensionDeclSyntax.self) else {
+        guard let extensionSyntax =  Self.generateEquatableExtensionSyntax(
+            sortedProperties: sortedProperties,
+            type: type
+        ) else {
             return []
         }
 
-        return [extensionSyntax]
+        // Check if the type conforms to `Hashable`
+        if Self.isHashable(structDecl) {
+            // If the type conforms to `Hashable` we need to generate the `Hashable` conformance to match
+            // the properties used in `Equatable` implementation
+            guard let hashableExtensionSyntax = Self.generateHashableExtensionSyntax(
+                sortedProperties: sortedProperties,
+                type: type
+            ) else {
+                return [extensionSyntax]
+            }
+
+            return [extensionSyntax, hashableExtensionSyntax]
+        } else {
+            return [extensionSyntax]
+        }
     }
 
     // Skip properties with SwiftUI attributes (like @State, @Binding, etc.) or if they are marked with @EqutableIgnored
@@ -207,6 +210,13 @@ public struct EquatableMacro: ExtensionMacro {
         varDecl.modifiers.contains { modifier in
             modifier.name.tokenKind == .keyword(.static)
         }
+    }
+
+    private static func isHashable(_ structDecl: StructDeclSyntax) -> Bool {
+        let existingConformances = structDecl.inheritanceClause?.inheritedTypes
+            .compactMap { $0.type.as(IdentifierTypeSyntax.self)?.name.text }
+        ?? []
+        return existingConformances.contains("Hashable")
     }
 
     private static func isMarkedWithEquatableIgnoredUnsafeClosure(_ varDecl: VariableDeclSyntax) -> Bool {
@@ -288,7 +298,7 @@ public struct EquatableMacro: ExtensionMacro {
                     Consider marking the closure with\
                     @EquatableIgnoredUnsafeClosure if it doesn't effect the view's body output.
                     """,
-                    fixItID: .init(
+                    fixItID: MessageID(
                         domain: "",
                         id: "test"
                     )
@@ -300,6 +310,47 @@ public struct EquatableMacro: ExtensionMacro {
 
         return diagnostic
     }
+
+    private static func generateEquatableExtensionSyntax(
+        sortedProperties: [(name: String, type: TypeSyntax?)],
+        type: TypeSyntaxProtocol
+    ) -> ExtensionDeclSyntax? {
+        let comparisons = sortedProperties.map { property in
+            "lhs.\(property.name) == rhs.\(property.name)"
+        }.joined(separator: " && ")
+
+        let equalityImplementation = comparisons.isEmpty ? "true" : comparisons
+
+        let extensionDecl: DeclSyntax = """
+        extension \(type): Equatable {
+            nonisolated public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                \(raw: equalityImplementation)
+            }
+        }
+        """
+
+        return extensionDecl.as(ExtensionDeclSyntax.self)
+    }
+
+    private static func generateHashableExtensionSyntax(
+        sortedProperties: [(name: String, type: TypeSyntax?)],
+        type: TypeSyntaxProtocol
+    ) -> ExtensionDeclSyntax? {
+        let hashableImplementation = sortedProperties.map { property in
+            "hasher.combine(\(property.name))"
+        }
+            .joined(separator: "\n")
+
+        let hashableExtensionDecl: DeclSyntax = """
+        extension \(raw: type) {
+            nonisolated public func hash(into hasher: inout Hasher) {
+                \(raw: hashableImplementation)
+            }
+        }
+        """
+
+        return hashableExtensionDecl.as(ExtensionDeclSyntax.self)
+    }
 }
 
 @main
@@ -309,95 +360,4 @@ struct EquatablePlugin: CompilerPlugin {
         EquatableIgnoredMacro.self,
         EquatableIgnoredUnsafeClosureMacro.self
     ]
-}
-
-struct SimpleFixItMessage: FixItMessage {
-    let message: String
-    let fixItID: MessageID
-}
-
-extension TypeSyntax {
-    var isSwift: Bool {
-        if self.as(IdentifierTypeSyntax.self)?.isSwift ?? false {
-            return true
-        }
-        return false
-    }
-}
-
-extension TypeSyntax {
-    var isArray: Bool {
-        if self.is(ArrayTypeSyntax.self) {
-            return true
-        }
-        if self.as(IdentifierTypeSyntax.self)?.isArray ?? false {
-            return true
-        }
-        if self.as(MemberTypeSyntax.self)?.isArray ?? false {
-            return true
-        }
-        return false
-    }
-}
-
-extension IdentifierTypeSyntax {
-    var isSwift: Bool {
-        if self.name.text == "Swift" {
-            return true
-        }
-        return false
-    }
-}
-
-extension IdentifierTypeSyntax {
-    var isArray: Bool {
-        if self.name.text == "Array" {
-            return true
-        }
-        return false
-    }
-}
-
-extension IdentifierTypeSyntax {
-    var isDictionary: Bool {
-        if self.name.text == "Dictionary" {
-            return true
-        }
-        return false
-    }
-}
-
-extension MemberTypeSyntax {
-    var isArray: Bool {
-        if self.baseType.isSwift,
-           self.name.text == "Array" {
-            return true
-        }
-        return false
-    }
-}
-
-extension MemberTypeSyntax {
-    var isDictionary: Bool {
-        if self.baseType.isSwift,
-           self.name.text == "Dictionary" {
-            return true
-        }
-        return false
-    }
-}
-
-extension TypeSyntax {
-    var isDictionary: Bool {
-        if self.is(DictionaryTypeSyntax.self) {
-            return true
-        }
-        if self.as(IdentifierTypeSyntax.self)?.isDictionary ?? false {
-            return true
-        }
-        if self.as(MemberTypeSyntax.self)?.isDictionary ?? false {
-            return true
-        }
-        return false
-    }
 }

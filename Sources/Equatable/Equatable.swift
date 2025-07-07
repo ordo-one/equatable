@@ -41,7 +41,7 @@
 ///     }
 /// }
 ///
-@attached(extension, conformances: Equatable, names: named(==))
+@attached(extension, conformances: Equatable, Hashable, names: named(==), named(hash(into:)))
 public macro Equatable() = #externalMacro(module: "EquatableMacros", type: "EquatableMacro")
 
 /// A peer macro that marks properties to be ignored in `Equatable` conformance generation.
