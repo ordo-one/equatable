@@ -8,7 +8,7 @@ import SwiftSyntaxMacros
 /// A macro that automatically generates an `Equatable` conformance for structs.
 ///
 /// This macro creates a standard equality implementation by comparing all stored properties
-/// that aren't explicitly marked to be skipped with `@EquatableIgnored.
+/// that aren't explicitly marked to be skipped with `@EquatableIgnored`.
 /// Properties with SwiftUI property wrappers (like `@State`, `@ObservedObject`, etc.)
 ///
 /// Structs with arbitary closures are not supported unless they are marked explicitly with `@EquatableIgnoredUnsafeClosure` -
