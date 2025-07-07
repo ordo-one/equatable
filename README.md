@@ -169,5 +169,4 @@ extension User {
 ```
 
 ## References
-
-This package is inspired by Cal Stephens' blog post [Understanding and Improving SwiftUI Performance](https://medium.com/airbnb-engineering/understanding-and-improving-swiftui-performance-37b77ac61896).
+This package is inspired by Cal Stephen's & Miguel Jimenez's blog post [Understanding and Improving SwiftUI Performance](https://medium.com/airbnb-engineering/understanding-and-improving-swiftui-performance-37b77ac61896).
