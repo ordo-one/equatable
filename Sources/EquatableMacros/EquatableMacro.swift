@@ -8,14 +8,15 @@ import SwiftSyntaxMacros
 /// A macro that automatically generates an `Equatable` conformance for structs.
 ///
 /// This macro creates a standard equality implementation by comparing all stored properties
-/// that aren't explicitly marked to be skipped with `@EquatableIgnored`. Properties with SwiftUI property wrappers
-/// (like `@State`, `@ObservedObject`, etc.)
+/// that aren't explicitly marked to be skipped with `@EquatableIgnored.
+/// Properties with SwiftUI property wrappers (like `@State`, `@ObservedObject`, etc.)
 ///
 /// Structs with arbitary closures are not supported unless they are marked explicitly with `@EquatableIgnoredUnsafeClosure` -
 /// meaning that they are safe because they don't  influence rendering of the view's body.
 ///
 /// Usage:
 /// ```swift
+/// import Equatable
 /// import SwiftUI
 ///
 /// @Equatable
@@ -46,7 +47,33 @@ import SwiftSyntaxMacros
 ///         lhs.id == rhs.id && lhs.username == rhs.username
 ///     }
 /// }
+/// ```
 ///
+/// If tye type is marked as conforming to `Hashable`  the compiler synthensized `Hashable` implementation will not be correct.
+/// That's why the `@Equatable` macro will also generate a `Hashable` implementation for the type that is aligned with the `Equatable` implementation.
+///
+/// ```swift
+/// import Equatable
+/// @Equatable
+/// struct User: Hashable {
+///     let id: Int
+///     @EquatableIgnored var name = ""
+/// }
+/// ```
+///
+/// Expanded:
+/// ```swift
+/// extension User: Equatable {
+///     nonisolated public static func == (lhs: User, rhs: User) -> Bool {
+///         lhs.id == rhs.id
+///     }
+/// }
+/// extension User {
+///     nonisolated public func hash(into hasher: inout Hasher) {
+///         hasher.combine(id)
+///     }
+/// }
+/// ```
 public struct EquatableMacro: ExtensionMacro {
     private static let skippablePropertyWrappers: Set = [
         "State",

@@ -139,6 +139,35 @@ struct ViewTakesClosure: View {
 In this example `ViewTakesClosure`'s closure captures the `enabled` value on callsite and since it's marked with `@EquatableIgnoredUnsafeClosure`
 it will not cause a re-render when the value of `enabled` changes. The closure will always print the initial value of `enabled` which is an incorrect behavior.
 
+## Hashable conformance
+
+If tye type is marked as conforming to `Hashable`  the compiler synthensized `Hashable` implementation will not be correct. That's why the `@Equatable` macro will also generate a `Hashable` implementation for the type that is aligned with the `Equatable` implementation.
+
+```swift
+import Equatable
+@Equatable
+struct User: Hashable {
+
+let id: Int
+
+@EquatableIgnored var name = ""
+}
+```
+
+Expanded:
+```swift
+extension User: Equatable {
+    nonisolated public static func == (lhs: User, rhs: User) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+extension User {
+    nonisolated public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+```
+
 ## References
 
 This package is inspired by Cal Stephens' blog post [Understanding and Improving SwiftUI Performance](https://medium.com/airbnb-engineering/understanding-and-improving-swiftui-performance-37b77ac61896).
