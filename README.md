@@ -141,7 +141,7 @@ it will not cause a re-render when the value of `enabled` changes. The closure w
 
 ## Hashable conformance
 
-If tye type is marked as conforming to `Hashable`  the compiler synthensized `Hashable` implementation will not be correct. That's why the `@Equatable` macro will also generate a `Hashable` implementation for the type that is aligned with the `Equatable` implementation.
+If the type is marked as conforming to `Hashable`  the compiler synthesized `Hashable` implementation will not be correct. That's why the `@Equatable` macro will also generate a `Hashable` implementation for the type that is aligned with the `Equatable` implementation.
 
 ```swift
 import Equatable
