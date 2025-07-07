@@ -600,5 +600,47 @@ struct EquatableMacroTests {
             """
         }
     }
+
+    @Test
+    func testGenerateHashableConformanceWhenTypesConformsToHashable() async throws {
+        assertMacro {
+            """
+            @Equatable
+            struct User: Hashable {
+              let id: Int
+              @EquatableIgnored
+              var name = ""
+              @EquatableIgnoredUnsafeClosure
+              var onTap: () -> Void
+              var age: Int
+              var name: String
+            }
+            """
+        } expansion: {
+            """
+            struct User: Hashable {
+              let id: Int
+              var name = ""
+              var onTap: () -> Void
+              var age: Int
+              var name: String
+            }
+
+            extension User: Equatable {
+                nonisolated public static func == (lhs: User, rhs: User) -> Bool {
+                    lhs.id == rhs.id && lhs.age == rhs.age && lhs.name == rhs.name
+                }
+            }
+
+            extension User {
+                nonisolated public func hash(into hasher: inout Hasher) {
+                    hasher.combine(id)
+                    hasher.combine(age)
+                    hasher.combine(name)
+                }
+            }
+            """
+        }
+    }
 }
 // swiftlint:enable all

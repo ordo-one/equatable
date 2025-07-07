@@ -40,8 +40,34 @@
 ///         lhs.id == rhs.id && lhs.username == rhs.username
 ///     }
 /// }
+/// ```
 ///
-@attached(extension, conformances: Equatable, names: named(==))
+/// If the type is marked as conforming to `Hashable` the compiler synthesized `Hashable` implementation will not be correct.
+/// That's why the `@Equatable` macro will also generate a `Hashable` implementation for the type that is aligned with the `Equatable` implementation.
+///
+/// ```swift
+/// import Equatable
+/// @Equatable
+/// struct User: Hashable {
+///     let id: Int
+///     @EquatableIgnored var name = ""
+/// }
+/// ```
+///
+/// Expanded:
+/// ```swift
+/// extension User: Equatable {
+///     nonisolated public static func == (lhs: User, rhs: User) -> Bool {
+///         lhs.id == rhs.id
+///     }
+/// }
+/// extension User {
+///     nonisolated public func hash(into hasher: inout Hasher) {
+///         hasher.combine(id)
+///     }
+/// }
+/// ```
+@attached(extension, conformances: Equatable, Hashable, names: named(==), named(hash(into:)))
 public macro Equatable() = #externalMacro(module: "EquatableMacros", type: "EquatableMacro")
 
 /// A peer macro that marks properties to be ignored in `Equatable` conformance generation.
