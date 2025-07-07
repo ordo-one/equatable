@@ -76,14 +76,30 @@ import SwiftSyntaxMacros
 /// ```
 public struct EquatableMacro: ExtensionMacro {
     private static let skippablePropertyWrappers: Set = [
+        "AccessibilityFocusState",
+        "AppStorage",
+        "Binding",
+        "Bindable",
+        "Environment",
+        "EnvironmentObject",
+        "FetchRequest",
+        "FocusState",
+        "FocusedBinding",
+        "FocusedObject",
+        "FocusedValue",
+        "GestureState",
+        "NSApplicationDelegateAdaptor",
+        "Namespace",
+        "ObservedObject",
+        "PhysicalMetric",
+        "ScaledMetric",
+        "SceneStorage",
+        "SectionedFetchRequest",
         "State",
         "StateObject",
-        "ObservedObject",
-        "EnvironmentObject",
-        "Environment",
-        "FocusState",
-        "SceneStorage",
-        "AppStorage"
+        "UIApplicationDelegateAdaptor",
+        "WKApplicationDelegateAdaptor",
+        "WKExtensionDelegateAdaptor",
     ]
 
     // swiftlint:disable:next cyclomatic_complexity function_body_length

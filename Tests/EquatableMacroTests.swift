@@ -87,13 +87,30 @@ struct EquatableMacroTests {
             """
             @Equatable
             struct TitleView: View {
-                @State var dataModel = TitleDataModel()
-                @Environment(\\.colorScheme) var colorScheme
-                @StateObject private var viewModel = TitleViewModel()
-                @ObservedObject var anotherViewModel = AnotherViewModel()
-                @FocusState var isFocused: Bool
-                @SceneStorage("title") var title: String = "Default Title"
+                @AccessibilityFocusState var accessibilityFocusState: Bool
                 @AppStorage("title") var appTitle: String = "App Title"
+                @Binding var binding: Bool
+                @Bindable var bindable = VM()
+                @Environment(\\.colorScheme) var colorScheme
+                @EnvironmentObject(VM.self) var environmentObject
+                @FetchRequest(sortDescriptors: [SortDescriptor(\\.time, order: .reverse)]) var quakes: FetchedResults<Quake>
+                @FocusState var isFocused: Bool
+                @FocusedBinding(\\.focusedBinding) var focusedBinding
+                @FocusedObject var focusedObject = FocusModel()
+                @FocusedValue(\\.focusedValue) var focusedValue 
+                @GestureState private var isDetectingLongPress = false            
+                @NSApplicationDelegateAdaptor private var appDelegate: MyAppDelegate
+                @Namespace var namespace
+                @ObservedObject var anotherViewModel = AnotherViewModel()
+                @PhysicalMetric(from: .meters) var twoAndAHalfMeters = 2.5
+                @ScaledMetric(relativeTo: .body) var scaledPadding: CGFloat = 10
+                @SceneStorage("title") var title: String = "Default Title"
+                @SectionedFetchRequest<String, Quake>(sectionIdentifier: \\.day, sortDescriptors: [SortDescriptor(\\.time, order: .reverse)]) var quakes: SectionedFetchResults<String, Quake>
+                @State var dataModel = TitleDataModel()
+                @StateObject private var viewModel = TitleViewModel()
+                @UIApplicationDelegateAdaptor private var appDelegate: MyAppDelegate
+                @WKApplicationDelegateAdaptor var wkApplicationDelegateAdaptor: MyAppDelegate
+                @WKExtensionDelegateAdaptor private var extensionDelegate: MyExtensionDelegate
                 static let staticInt: Int = 42
                 let title: String
 
@@ -105,13 +122,30 @@ struct EquatableMacroTests {
         } expansion: {
             """
             struct TitleView: View {
-                @State var dataModel = TitleDataModel()
-                @Environment(\\.colorScheme) var colorScheme
-                @StateObject private var viewModel = TitleViewModel()
-                @ObservedObject var anotherViewModel = AnotherViewModel()
-                @FocusState var isFocused: Bool
-                @SceneStorage("title") var title: String = "Default Title"
+                @AccessibilityFocusState var accessibilityFocusState: Bool
                 @AppStorage("title") var appTitle: String = "App Title"
+                @Binding var binding: Bool
+                @Bindable var bindable = VM()
+                @Environment(\\.colorScheme) var colorScheme
+                @EnvironmentObject(VM.self) var environmentObject
+                @FetchRequest(sortDescriptors: [SortDescriptor(\\.time, order: .reverse)]) var quakes: FetchedResults<Quake>
+                @FocusState var isFocused: Bool
+                @FocusedBinding(\\.focusedBinding) var focusedBinding
+                @FocusedObject var focusedObject = FocusModel()
+                @FocusedValue(\\.focusedValue) var focusedValue 
+                @GestureState private var isDetectingLongPress = false            
+                @NSApplicationDelegateAdaptor private var appDelegate: MyAppDelegate
+                @Namespace var namespace
+                @ObservedObject var anotherViewModel = AnotherViewModel()
+                @PhysicalMetric(from: .meters) var twoAndAHalfMeters = 2.5
+                @ScaledMetric(relativeTo: .body) var scaledPadding: CGFloat = 10
+                @SceneStorage("title") var title: String = "Default Title"
+                @SectionedFetchRequest<String, Quake>(sectionIdentifier: \\.day, sortDescriptors: [SortDescriptor(\\.time, order: .reverse)]) var quakes: SectionedFetchResults<String, Quake>
+                @State var dataModel = TitleDataModel()
+                @StateObject private var viewModel = TitleViewModel()
+                @UIApplicationDelegateAdaptor private var appDelegate: MyAppDelegate
+                @WKApplicationDelegateAdaptor var wkApplicationDelegateAdaptor: MyAppDelegate
+                @WKExtensionDelegateAdaptor private var extensionDelegate: MyExtensionDelegate
                 static let staticInt: Int = 42
                 let title: String
 
@@ -135,13 +169,30 @@ struct EquatableMacroTests {
             """
             @Equatable
             struct TitleView: View {
-                @SwiftUI.State var dataModel = TitleDataModel()
-                @SwiftUI.Environment(\\.colorScheme) var colorScheme
-                @SwiftUI.StateObject private var viewModel = TitleViewModel()
-                @SwiftUI.ObservedObject var anotherViewModel = AnotherViewModel()
-                @SwiftUI.FocusState var isFocused: Bool
-                @SwiftUI.SceneStorage("title") var title: String = "Default Title"
+                @SwiftUI.AccessibilityFocusState var accessibilityFocusState: Bool
                 @SwiftUI.AppStorage("title") var appTitle: String = "App Title"
+                @SwiftUI.Binding var binding: Bool
+                @SwiftUI.Bindable var bindable = VM()
+                @SwiftUI.Environment(\\.colorScheme) var colorScheme
+                @SwiftUI.EnvironmentObject(VM.self) var environmentObject
+                @SwiftUI.FetchRequest(sortDescriptors: [SortDescriptor(\\.time, order: .reverse)]) var quakes: FetchedResults<Quake>
+                @SwiftUI.FocusState var isFocused: Bool
+                @SwiftUI.FocusedBinding(\\.focusedBinding) var focusedBinding
+                @SwiftUI.FocusedObject var focusedObject = FocusModel()
+                @SwiftUI.FocusedValue(\\.focusedValue) var focusedValue 
+                @SwiftUI.GestureState private var isDetectingLongPress = false            
+                @SwiftUI.NSApplicationDelegateAdaptor private var appDelegate: MyAppDelegate
+                @SwiftUI.Namespace var namespace
+                @SwiftUI.ObservedObject var anotherViewModel = AnotherViewModel()
+                @SwiftUI.PhysicalMetric(from: .meters) var twoAndAHalfMeters = 2.5
+                @SwiftUI.ScaledMetric(relativeTo: .body) var scaledPadding: CGFloat = 10
+                @SwiftUI.SceneStorage("title") var title: String = "Default Title"
+                @SwiftUI.SectionedFetchRequest<String, Quake>(sectionIdentifier: \\.day, sortDescriptors: [SortDescriptor(\\.time, order: .reverse)]) var quakes: SectionedFetchResults<String, Quake>
+                @SwiftUI.State var dataModel = TitleDataModel()
+                @SwiftUI.StateObject private var viewModel = TitleViewModel()
+                @SwiftUI.UIApplicationDelegateAdaptor private var appDelegate: MyAppDelegate
+                @SwiftUI.WKApplicationDelegateAdaptor var wkApplicationDelegateAdaptor: MyAppDelegate
+                @SwiftUI.WKExtensionDelegateAdaptor private var extensionDelegate: MyExtensionDelegate
                 static let staticInt: Int = 42
                 let title: String
 
@@ -153,13 +204,30 @@ struct EquatableMacroTests {
         } expansion: {
             """
             struct TitleView: View {
-                @SwiftUI.State var dataModel = TitleDataModel()
-                @SwiftUI.Environment(\\.colorScheme) var colorScheme
-                @SwiftUI.StateObject private var viewModel = TitleViewModel()
-                @SwiftUI.ObservedObject var anotherViewModel = AnotherViewModel()
-                @SwiftUI.FocusState var isFocused: Bool
-                @SwiftUI.SceneStorage("title") var title: String = "Default Title"
+                @SwiftUI.AccessibilityFocusState var accessibilityFocusState: Bool
                 @SwiftUI.AppStorage("title") var appTitle: String = "App Title"
+                @SwiftUI.Binding var binding: Bool
+                @SwiftUI.Bindable var bindable = VM()
+                @SwiftUI.Environment(\\.colorScheme) var colorScheme
+                @SwiftUI.EnvironmentObject(VM.self) var environmentObject
+                @SwiftUI.FetchRequest(sortDescriptors: [SortDescriptor(\\.time, order: .reverse)]) var quakes: FetchedResults<Quake>
+                @SwiftUI.FocusState var isFocused: Bool
+                @SwiftUI.FocusedBinding(\\.focusedBinding) var focusedBinding
+                @SwiftUI.FocusedObject var focusedObject = FocusModel()
+                @SwiftUI.FocusedValue(\\.focusedValue) var focusedValue 
+                @SwiftUI.GestureState private var isDetectingLongPress = false            
+                @SwiftUI.NSApplicationDelegateAdaptor private var appDelegate: MyAppDelegate
+                @SwiftUI.Namespace var namespace
+                @SwiftUI.ObservedObject var anotherViewModel = AnotherViewModel()
+                @SwiftUI.PhysicalMetric(from: .meters) var twoAndAHalfMeters = 2.5
+                @SwiftUI.ScaledMetric(relativeTo: .body) var scaledPadding: CGFloat = 10
+                @SwiftUI.SceneStorage("title") var title: String = "Default Title"
+                @SwiftUI.SectionedFetchRequest<String, Quake>(sectionIdentifier: \\.day, sortDescriptors: [SortDescriptor(\\.time, order: .reverse)]) var quakes: SectionedFetchResults<String, Quake>
+                @SwiftUI.State var dataModel = TitleDataModel()
+                @SwiftUI.StateObject private var viewModel = TitleViewModel()
+                @SwiftUI.UIApplicationDelegateAdaptor private var appDelegate: MyAppDelegate
+                @SwiftUI.WKApplicationDelegateAdaptor var wkApplicationDelegateAdaptor: MyAppDelegate
+                @SwiftUI.WKExtensionDelegateAdaptor private var extensionDelegate: MyExtensionDelegate
                 static let staticInt: Int = 42
                 let title: String
 
