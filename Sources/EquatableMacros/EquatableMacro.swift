@@ -168,7 +168,7 @@ public struct EquatableMacro: ExtensionMacro {
             return []
         }
 
-        guard let extensionSyntax =  Self.generateEquatableExtensionSyntax(
+        guard let extensionSyntax = Self.generateEquatableExtensionSyntax(
             sortedProperties: sortedProperties,
             type: type
         ) else {

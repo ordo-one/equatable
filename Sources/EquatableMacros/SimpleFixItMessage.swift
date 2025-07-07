@@ -1,5 +1,5 @@
-import SwiftSyntax
 import SwiftDiagnostics
+import SwiftSyntax
 
 struct SimpleFixItMessage: FixItMessage {
     let message: String
