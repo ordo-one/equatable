@@ -89,13 +89,11 @@ struct EquatableMacroTests {
             struct TitleView: View {
                 @AccessibilityFocusState var accessibilityFocusState: Bool
                 @AppStorage("title") var appTitle: String = "App Title"
-                @Binding var binding: Bool
                 @Bindable var bindable = VM()
                 @Environment(\\.colorScheme) var colorScheme
                 @EnvironmentObject(VM.self) var environmentObject
                 @FetchRequest(sortDescriptors: [SortDescriptor(\\.time, order: .reverse)]) var quakes: FetchedResults<Quake>
                 @FocusState var isFocused: Bool
-                @FocusedBinding(\\.focusedBinding) var focusedBinding
                 @FocusedObject var focusedObject = FocusModel()
                 @FocusedValue(\\.focusedValue) var focusedValue 
                 @GestureState private var isDetectingLongPress = false            
@@ -124,13 +122,11 @@ struct EquatableMacroTests {
             struct TitleView: View {
                 @AccessibilityFocusState var accessibilityFocusState: Bool
                 @AppStorage("title") var appTitle: String = "App Title"
-                @Binding var binding: Bool
                 @Bindable var bindable = VM()
                 @Environment(\\.colorScheme) var colorScheme
                 @EnvironmentObject(VM.self) var environmentObject
                 @FetchRequest(sortDescriptors: [SortDescriptor(\\.time, order: .reverse)]) var quakes: FetchedResults<Quake>
                 @FocusState var isFocused: Bool
-                @FocusedBinding(\\.focusedBinding) var focusedBinding
                 @FocusedObject var focusedObject = FocusModel()
                 @FocusedValue(\\.focusedValue) var focusedValue 
                 @GestureState private var isDetectingLongPress = false            
@@ -171,13 +167,11 @@ struct EquatableMacroTests {
             struct TitleView: View {
                 @SwiftUI.AccessibilityFocusState var accessibilityFocusState: Bool
                 @SwiftUI.AppStorage("title") var appTitle: String = "App Title"
-                @SwiftUI.Binding var binding: Bool
                 @SwiftUI.Bindable var bindable = VM()
                 @SwiftUI.Environment(\\.colorScheme) var colorScheme
                 @SwiftUI.EnvironmentObject(VM.self) var environmentObject
                 @SwiftUI.FetchRequest(sortDescriptors: [SortDescriptor(\\.time, order: .reverse)]) var quakes: FetchedResults<Quake>
                 @SwiftUI.FocusState var isFocused: Bool
-                @SwiftUI.FocusedBinding(\\.focusedBinding) var focusedBinding
                 @SwiftUI.FocusedObject var focusedObject = FocusModel()
                 @SwiftUI.FocusedValue(\\.focusedValue) var focusedValue 
                 @SwiftUI.GestureState private var isDetectingLongPress = false            
@@ -206,13 +200,11 @@ struct EquatableMacroTests {
             struct TitleView: View {
                 @SwiftUI.AccessibilityFocusState var accessibilityFocusState: Bool
                 @SwiftUI.AppStorage("title") var appTitle: String = "App Title"
-                @SwiftUI.Binding var binding: Bool
                 @SwiftUI.Bindable var bindable = VM()
                 @SwiftUI.Environment(\\.colorScheme) var colorScheme
                 @SwiftUI.EnvironmentObject(VM.self) var environmentObject
                 @SwiftUI.FetchRequest(sortDescriptors: [SortDescriptor(\\.time, order: .reverse)]) var quakes: FetchedResults<Quake>
                 @SwiftUI.FocusState var isFocused: Bool
-                @SwiftUI.FocusedBinding(\\.focusedBinding) var focusedBinding
                 @SwiftUI.FocusedObject var focusedObject = FocusModel()
                 @SwiftUI.FocusedValue(\\.focusedValue) var focusedValue 
                 @SwiftUI.GestureState private var isDetectingLongPress = false            

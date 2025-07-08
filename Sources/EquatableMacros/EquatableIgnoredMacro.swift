@@ -67,6 +67,17 @@ public struct EquatableIgnoredMacro: PeerMacro {
             return []
         }
 
+        guard varDecl.attributes.allSatisfy({
+            $0.as(AttributeSyntax.self)?.attributeName.as(IdentifierTypeSyntax.self)?.trimmed.description != "FocusedBinding"
+        }) else {
+            let diagnostic = Diagnostic(
+                node: node,
+                message: MacroExpansionErrorMessage("@EquatableIgnored cannot be applied to @FocusedBinding properties")
+            )
+            context.diagnose(diagnostic)
+            return []
+        }
+
         return []
     }
 }

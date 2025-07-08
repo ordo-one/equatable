@@ -78,13 +78,11 @@ public struct EquatableMacro: ExtensionMacro {
     private static let skippablePropertyWrappers: Set = [
         "AccessibilityFocusState",
         "AppStorage",
-        "Binding",
         "Bindable",
         "Environment",
         "EnvironmentObject",
         "FetchRequest",
         "FocusState",
-        "FocusedBinding",
         "FocusedObject",
         "FocusedValue",
         "GestureState",
