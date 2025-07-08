@@ -338,6 +338,37 @@ struct EquatableMacroTests {
     }
 
     @Test
+    func equatableIgnoredCannotBeAppliedToFocusedBindings() async throws {
+        assertMacro {
+            """
+            @Equatable
+            struct CustomView: View {
+                @EquatableIgnored @FocusedBinding(\\.focusedBinding) var focusedBinding
+
+                var body: some View {
+                    Text("CustomView")
+                }
+            }
+            """
+        } diagnostics: {
+            """
+            @Equatable
+            ┬─────────
+            ╰─ 🛑 @Equatable requires at least one equatable stored property.
+            struct CustomView: View {
+                @EquatableIgnored @FocusedBinding(\\.focusedBinding) var focusedBinding
+                ┬────────────────
+                ╰─ 🛑 @EquatableIgnored cannot be applied to @FocusedBinding properties
+
+                var body: some View {
+                    Text("CustomView")
+                }
+            }
+            """
+        }
+    }
+
+    @Test
     func arbitaryClosuresNotAllowed() async throws {
         // There is a bug in assertMacro somewhere and it produces the fixit with
         //
