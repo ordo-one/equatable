@@ -1,5 +1,4 @@
 import Foundation
-import SwiftCompilerPlugin
 import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxBuilder
@@ -76,14 +75,28 @@ import SwiftSyntaxMacros
 /// ```
 public struct EquatableMacro: ExtensionMacro {
     private static let skippablePropertyWrappers: Set = [
+        "AccessibilityFocusState",
+        "AppStorage",
+        "Bindable",
+        "Environment",
+        "EnvironmentObject",
+        "FetchRequest",
+        "FocusState",
+        "FocusedObject",
+        "FocusedValue",
+        "GestureState",
+        "NSApplicationDelegateAdaptor",
+        "Namespace",
+        "ObservedObject",
+        "PhysicalMetric",
+        "ScaledMetric",
+        "SceneStorage",
+        "SectionedFetchRequest",
         "State",
         "StateObject",
-        "ObservedObject",
-        "EnvironmentObject",
-        "Environment",
-        "FocusState",
-        "SceneStorage",
-        "AppStorage"
+        "UIApplicationDelegateAdaptor",
+        "WKApplicationDelegateAdaptor",
+        "WKExtensionDelegateAdaptor"
     ]
 
     // swiftlint:disable:next cyclomatic_complexity function_body_length
@@ -191,7 +204,9 @@ public struct EquatableMacro: ExtensionMacro {
             return [extensionSyntax]
         }
     }
+}
 
+extension EquatableMacro {
     // Skip properties with SwiftUI attributes (like @State, @Binding, etc.) or if they are marked with @EqutableIgnored
     private static func shouldSkip(_ varDecl: VariableDeclSyntax) -> Bool {
         varDecl.attributes.contains { attribute in
@@ -378,13 +393,4 @@ public struct EquatableMacro: ExtensionMacro {
 
         return hashableExtensionDecl.as(ExtensionDeclSyntax.self)
     }
-}
-
-@main
-struct EquatablePlugin: CompilerPlugin {
-    let providingMacros: [Macro.Type] = [
-        EquatableMacro.self,
-        EquatableIgnoredMacro.self,
-        EquatableIgnoredUnsafeClosureMacro.self
-    ]
 }
