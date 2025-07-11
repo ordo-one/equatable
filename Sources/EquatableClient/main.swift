@@ -1,5 +1,5 @@
 import Equatable
-#if canImport(Observation) && canImport(SwiftUI)
+#if canImport(SwiftUI)
 import Observation
 import SwiftUI
 
