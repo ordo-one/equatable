@@ -24,6 +24,11 @@ import SwiftSyntaxMacros
 /// - Closure properties
 /// - Properties already marked with `@Binding`
 public struct EquatableIgnoredMacro: PeerMacro {
+    private static let unignorablePropertyWrappers: Set = [
+        "Binding",
+        "FocusedBinding"
+    ]
+
     public static func expansion(
         of node: AttributeSyntax,
         providingPeersOf declaration: some DeclSyntaxProtocol,
@@ -50,34 +55,19 @@ public struct EquatableIgnoredMacro: PeerMacro {
             }
         }
 
-        // Should not be applied to @Binding
-        let hasBinding = varDecl.attributes.contains { attribute in
-            if let attributeName = attribute.as(AttributeSyntax.self)?.attributeName.as(IdentifierTypeSyntax.self)?.name.text {
-                return attributeName == "Binding"
-            }
-            return false
-        }
-
-        guard !hasBinding else {
+        if let unignorableAttribute = varDecl.attributes.compactMap(attributeName(_:)).first(where: unignorablePropertyWrappers.contains(_:)) {
             let diagnostic = Diagnostic(
                 node: node,
-                message: MacroExpansionErrorMessage("@EquatableIgnored cannot be applied to @Binding properties")
-            )
-            context.diagnose(diagnostic)
-            return []
-        }
-
-        guard varDecl.attributes.allSatisfy({
-            $0.as(AttributeSyntax.self)?.attributeName.as(IdentifierTypeSyntax.self)?.trimmed.description != "FocusedBinding"
-        }) else {
-            let diagnostic = Diagnostic(
-                node: node,
-                message: MacroExpansionErrorMessage("@EquatableIgnored cannot be applied to @FocusedBinding properties")
+                message: MacroExpansionErrorMessage("@EquatableIgnored cannot be applied to @\(unignorableAttribute) properties")
             )
             context.diagnose(diagnostic)
             return []
         }
 
         return []
+    }
+
+    private static func attributeName(_ attribute: AttributeListSyntax.Element) -> String? {
+        attribute.as(AttributeSyntax.self)?.attributeName.as(IdentifierTypeSyntax.self)?.trimmed.description
     }
 }
