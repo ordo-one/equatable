@@ -132,7 +132,7 @@ public struct EquatableMacro: ExtensionMacro {
             }
 
             // Skip static properties
-            if Self.isStatic(varDecl) {
+            if varDecl.isStatic {
                 return nil
             }
 
@@ -172,15 +172,6 @@ public struct EquatableMacro: ExtensionMacro {
             return Self.compare(lhs: lhs, rhs: rhs)
         }
 
-        guard !storedProperties.isEmpty else {
-            let diagnostic = Diagnostic(
-                node: node,
-                message: MacroExpansionErrorMessage("@Equatable requires at least one equatable stored property.")
-            )
-            context.diagnose(diagnostic)
-            return []
-        }
-
         guard let extensionSyntax = Self.generateEquatableExtensionSyntax(
             sortedProperties: sortedProperties,
             type: type
@@ -189,7 +180,7 @@ public struct EquatableMacro: ExtensionMacro {
         }
 
         // Check if the type conforms to `Hashable`
-        if Self.isHashable(structDecl) {
+        if structDecl.isHashable {
             // If the type conforms to `Hashable` we need to generate the `Hashable` conformance to match
             // the properties used in `Equatable` implementation
             guard let hashableExtensionSyntax = Self.generateHashableExtensionSyntax(
@@ -246,19 +237,6 @@ extension EquatableMacro {
             return true
         }
         return false
-    }
-
-    private static func isStatic(_ varDecl: VariableDeclSyntax) -> Bool {
-        varDecl.modifiers.contains { modifier in
-            modifier.name.tokenKind == .keyword(.static)
-        }
-    }
-
-    private static func isHashable(_ structDecl: StructDeclSyntax) -> Bool {
-        let existingConformances = structDecl.inheritanceClause?.inheritedTypes
-            .compactMap { $0.type.as(IdentifierTypeSyntax.self)?.name.text }
-        ?? []
-        return existingConformances.contains("Hashable")
     }
 
     private static func isMarkedWithEquatableIgnoredUnsafeClosure(_ varDecl: VariableDeclSyntax) -> Bool {
@@ -357,6 +335,18 @@ extension EquatableMacro {
         sortedProperties: [(name: String, type: TypeSyntax?)],
         type: TypeSyntaxProtocol
     ) -> ExtensionDeclSyntax? {
+        guard !sortedProperties.isEmpty else {
+            let extensionDecl: DeclSyntax = """
+            extension \(type): Equatable {
+                nonisolated public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                    true
+                }
+            }
+            """
+
+            return extensionDecl.as(ExtensionDeclSyntax.self)
+        }
+
         let comparisons = sortedProperties.map { property in
             "lhs.\(property.name) == rhs.\(property.name)"
         }.joined(separator: " && ")
@@ -378,6 +368,16 @@ extension EquatableMacro {
         sortedProperties: [(name: String, type: TypeSyntax?)],
         type: TypeSyntaxProtocol
     ) -> ExtensionDeclSyntax? {
+        guard !sortedProperties.isEmpty else {
+            let hashableExtensionDecl: DeclSyntax = """
+            extension \(raw: type) {
+                nonisolated public func hash(into hasher: inout Hasher) {}
+            }
+            """
+
+            return hashableExtensionDecl.as(ExtensionDeclSyntax.self)
+        }
+
         let hashableImplementation = sortedProperties.map { property in
             "hasher.combine(\(property.name))"
         }
