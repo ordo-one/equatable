@@ -6,7 +6,7 @@ import PackageDescription
 
 let package = Package(
     name: "Equatable",
-    platforms: [.macOS(.v14), .iOS(.v17), .tvOS(.v17), .watchOS(.v10), .macCatalyst(.v17)],
+    platforms: [.macOS(.v12), .iOS(.v15), .tvOS(.v15), .watchOS(.v8), .macCatalyst(.v15)],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
