@@ -1,5 +1,4 @@
 import Foundation
-import SwiftCompilerPlugin
 import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxBuilder
@@ -97,7 +96,7 @@ public struct EquatableMacro: ExtensionMacro {
         "StateObject",
         "UIApplicationDelegateAdaptor",
         "WKApplicationDelegateAdaptor",
-        "WKExtensionDelegateAdaptor",
+        "WKExtensionDelegateAdaptor"
     ]
 
     // swiftlint:disable:next cyclomatic_complexity function_body_length
@@ -205,7 +204,9 @@ public struct EquatableMacro: ExtensionMacro {
             return [extensionSyntax]
         }
     }
+}
 
+extension EquatableMacro {
     // Skip properties with SwiftUI attributes (like @State, @Binding, etc.) or if they are marked with @EqutableIgnored
     private static func shouldSkip(_ varDecl: VariableDeclSyntax) -> Bool {
         varDecl.attributes.contains { attribute in
@@ -392,13 +393,4 @@ public struct EquatableMacro: ExtensionMacro {
 
         return hashableExtensionDecl.as(ExtensionDeclSyntax.self)
     }
-}
-
-@main
-struct EquatablePlugin: CompilerPlugin {
-    let providingMacros: [Macro.Type] = [
-        EquatableMacro.self,
-        EquatableIgnoredMacro.self,
-        EquatableIgnoredUnsafeClosureMacro.self
-    ]
 }

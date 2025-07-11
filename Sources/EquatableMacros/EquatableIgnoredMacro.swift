@@ -55,7 +55,9 @@ public struct EquatableIgnoredMacro: PeerMacro {
             }
         }
 
-        if let unignorableAttribute = varDecl.attributes.compactMap(attributeName(_:)).first(where: unignorablePropertyWrappers.contains(_:)) {
+        if let unignorableAttribute = varDecl.attributes
+           .compactMap(attributeName(_:))
+           .first(where: unignorablePropertyWrappers.contains(_:)) {
             let diagnostic = Diagnostic(
                 node: node,
                 message: MacroExpansionErrorMessage("@EquatableIgnored cannot be applied to @\(unignorableAttribute) properties")
