@@ -322,8 +322,6 @@ struct EquatableMacroTests {
         } diagnostics: {
             """
             @Equatable
-            ┬─────────
-            ╰─ 🛑 @Equatable requires at least one equatable stored property.
             struct CustomView: View {
                 @EquatableIgnored @Binding var name: String
                 ┬────────────────
@@ -351,12 +349,10 @@ struct EquatableMacroTests {
             }
             """
         } diagnostics: {
-            """
+            #"""
             @Equatable
-            ┬─────────
-            ╰─ 🛑 @Equatable requires at least one equatable stored property.
             struct CustomView: View {
-                @EquatableIgnored @FocusedBinding(\\.focusedBinding) var focusedBinding
+                @EquatableIgnored @FocusedBinding(\.focusedBinding) var focusedBinding
                 ┬────────────────
                 ╰─ 🛑 @EquatableIgnored cannot be applied to @FocusedBinding properties
 
@@ -364,7 +360,7 @@ struct EquatableMacroTests {
                     Text("CustomView")
                 }
             }
-            """
+            """#
         }
     }
 
@@ -482,27 +478,65 @@ struct EquatableMacroTests {
             @Equatable
             struct NoProperties: View {
                 @EquatableIgnoredUnsafeClosure let onTap: () -> Void
-
-                var body: some View {
-                    Text("")
-                }
-            }
-            """
-        } diagnostics: {
-            """
-            @Equatable
-            ┬─────────
-            ╰─ 🛑 @Equatable requires at least one equatable stored property.
-            struct NoProperties: View {
-                @EquatableIgnoredUnsafeClosure let onTap: () -> Void
-
+            
                 var body: some View {
                     Text("")
                 }
             }
             """
         } expansion: {
-            ""
+            """
+            struct NoProperties: View {
+                let onTap: () -> Void
+
+                var body: some View {
+                    Text("")
+                }
+            }
+
+            extension NoProperties: Equatable {
+                nonisolated public static func == (lhs: NoProperties, rhs: NoProperties) -> Bool {
+                    true
+                }
+            }
+            """
+        }
+    }
+
+    @Test
+    func noEquatablePropertiesConformingToHashable() async throws {
+        assertMacro {
+            """
+            @Equatable
+            struct NoProperties: View, Hashable {
+                @EquatableIgnoredUnsafeClosure let onTap: () -> Void
+            
+                var body: some View {
+                    Text("")
+                }
+            }
+            """
+        } expansion: {
+            """
+            struct NoProperties: View, Hashable {
+                let onTap: () -> Void
+
+                var body: some View {
+                    Text("")
+                }
+            }
+
+            extension NoProperties: Equatable {
+                nonisolated public static func == (lhs: NoProperties, rhs: NoProperties) -> Bool {
+                    true
+                }
+            }
+
+            extension NoProperties {
+                nonisolated public func hash(into hasher: inout Hasher) {
+                }
+            }
+            """
         }
     }
 
