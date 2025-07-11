@@ -1,5 +1,6 @@
 import Equatable
-#if canImport(SwiftUI)
+#if canImport(Observation) && canImport(SwiftUI)
+import Observation
 import SwiftUI
 
 struct MyView: View {
@@ -74,9 +75,11 @@ struct Anon {
     let basicString: String
 }
 
+@available(iOS 17.0, macOS 14.0, watchOS 10, tvOS 17, visionOS 1, *)
 @Observable
 final class TitleDataModel {}
 
+@available(iOS 17.0, macOS 14.0, watchOS 10, tvOS 17, visionOS 1, *)
 @Equatable
 struct TitleView: View {
     @State var dataModel = TitleDataModel()
