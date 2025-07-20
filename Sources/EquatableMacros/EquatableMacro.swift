@@ -98,7 +98,7 @@ public struct EquatableMacro: ExtensionMacro {
         "WKApplicationDelegateAdaptor",
         "WKExtensionDelegateAdaptor"
     ]
-    
+
     // swiftlint:disable:next cyclomatic_complexity function_body_length
     public static func expansion(
         of node: AttributeSyntax,
@@ -116,7 +116,7 @@ public struct EquatableMacro: ExtensionMacro {
             context.diagnose(diagnostic)
             return []
         }
-        
+
         // Extract stored properties
         var storedProperties: [(name: String, type: TypeSyntax?)] = []
         for member in structDecl.memberBlock.members {
@@ -127,40 +127,40 @@ public struct EquatableMacro: ExtensionMacro {
                   !varDecl.isStatic else {
                 continue
             }
-            
+
             if Self.shouldSkip(varDecl) {
                 continue
             }
-            
+
             if isMarkedWithEquatableIgnoredUnsafeClosure(varDecl) {
                 continue
             }
-            
+
             // Check if it's a closure that should trigger diagnostic
             let isClosureProperty = (binding.typeAnnotation?.type).map(isClosure) == true ||
             (binding.initializer?.value.is(ClosureExprSyntax.self) ?? false)
-            
+
             if isClosureProperty {
                 let diagnostic = Self.makeClosureDiagnostic(for: varDecl)
                 context.diagnose(diagnostic)
                 continue
             }
-            
+
             storedProperties.append((name: identifier, type: binding.typeAnnotation?.type))
         }
-        
+
         // Sort properties: "id" first, then by type complexity
         let sortedProperties = storedProperties.sorted { lhs, rhs in
             return Self.compare(lhs: lhs, rhs: rhs)
         }
-        
+
         guard let extensionSyntax = Self.generateEquatableExtensionSyntax(
             sortedProperties: sortedProperties,
             type: type
         ) else {
             return []
         }
-        
+
         // If the type conforms to `Hashable`, always generate a corresponding hash function aligned with the `Equatable` implementation
         if structDecl.isHashable {
             guard let hashableExtensionSyntax = Self.generateHashableExtensionSyntax(
@@ -169,9 +169,7 @@ public struct EquatableMacro: ExtensionMacro {
             ) else {
                 return [extensionSyntax]
             }
-            
             return [extensionSyntax, hashableExtensionSyntax]
-            
         } else {
             return [extensionSyntax]
         }
@@ -189,7 +187,7 @@ extension EquatableMacro {
             return false
         }
     }
-    
+
     private static func shouldSkip(atribute node: AttributeSyntax) -> Bool {
         if let identifierType = node.attributeName.as(IdentifierTypeSyntax.self),
            Self.shouldSkip(identifierType: identifierType) {
@@ -201,7 +199,7 @@ extension EquatableMacro {
         }
         return false
     }
-    
+
     private static func shouldSkip(identifierType node: IdentifierTypeSyntax) -> Bool {
         if node.name.text == "EquatableIgnored" {
             return true
@@ -211,7 +209,7 @@ extension EquatableMacro {
         }
         return false
     }
-    
+
     private static func shouldSkip(memberType node: MemberTypeSyntax) -> Bool {
         if node.baseType.as(IdentifierTypeSyntax.self)?.name.text == "SwiftUI",
            Self.skippablePropertyWrappers.contains(node.name.text) {
@@ -219,17 +217,16 @@ extension EquatableMacro {
         }
         return false
     }
-    
+
     private static func isMarkedWithEquatableIgnoredUnsafeClosure(_ varDecl: VariableDeclSyntax) -> Bool {
         varDecl.attributes.contains(where: { attribute in
             if let attributeName = attribute.as(AttributeSyntax.self)?.attributeName.as(IdentifierTypeSyntax.self)?.name.text {
                 return attributeName == "EquatableIgnoredUnsafeClosure"
             }
-            
             return false
         })
     }
-    
+
     private static func compare(lhs: (name: String, type: TypeSyntax?), rhs: (name: String, type: TypeSyntax?)) -> Bool {
         // "id" always comes first
         if lhs.name == "id" { return true }
@@ -237,19 +234,19 @@ extension EquatableMacro {
         
         let lhsComplexity = typeComplexity(lhs.type)
         let rhsComplexity = typeComplexity(rhs.type)
-        
+
         if lhsComplexity == rhsComplexity {
             return lhs.name < rhs.name
         }
         return lhsComplexity < rhsComplexity
     }
-    
+
     // swiftlint:disable:next cyclomatic_complexity
     private static func typeComplexity(_ type: TypeSyntax?) -> Int {
         guard let type else { return 100 } // Unknown types go last
-        
+
         let typeString = type.description.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-        
+
         switch typeString {
         case "Bool": return 1
         case "Int", "Int8", "Int16", "Int32", "Int64": return 2
@@ -267,15 +264,15 @@ extension EquatableMacro {
                     return typeComplexity(wrappedType) + 20
                 }
             }
-            
+
             if type.isArray {
                 return 30
             }
-            
+
             if type.isDictionary {
                 return 40
             }
-            
+
             return 50
         }
     }
@@ -308,10 +305,10 @@ extension EquatableMacro {
                 newNode: fixedDecl
             )
         )
-        
+
         return diagnostic
     }
-    
+
     private static func generateEquatableExtensionSyntax(
         sortedProperties: [(name: String, type: TypeSyntax?)],
         type: TypeSyntaxProtocol
@@ -324,16 +321,16 @@ extension EquatableMacro {
                 }
             }
             """
-            
+
             return extensionDecl.as(ExtensionDeclSyntax.self)
         }
-        
+
         let comparisons = sortedProperties.map { property in
             "lhs.\(property.name) == rhs.\(property.name)"
         }.joined(separator: " && ")
-        
+
         let equalityImplementation = comparisons.isEmpty ? "true" : comparisons
-        
+
         let extensionDecl: DeclSyntax = """
         extension \(type): Equatable {
             nonisolated public static func == (lhs: \(type), rhs: \(type)) -> Bool {
@@ -341,10 +338,10 @@ extension EquatableMacro {
             }
         }
         """
-        
+
         return extensionDecl.as(ExtensionDeclSyntax.self)
     }
-    
+
     private static func generateHashableExtensionSyntax(
         sortedProperties: [(name: String, type: TypeSyntax?)],
         type: TypeSyntaxProtocol
@@ -355,15 +352,15 @@ extension EquatableMacro {
                 nonisolated public func hash(into hasher: inout Hasher) {}
             }
             """
-            
+
             return hashableExtensionDecl.as(ExtensionDeclSyntax.self)
         }
-        
+
         let hashableImplementation = sortedProperties.map { property in
             "hasher.combine(\(property.name))"
         }
             .joined(separator: "\n")
-        
+
         let hashableExtensionDecl: DeclSyntax = """
         extension \(raw: type) {
             nonisolated public func hash(into hasher: inout Hasher) {
@@ -371,7 +368,7 @@ extension EquatableMacro {
             }
         }
         """
-        
+
         return hashableExtensionDecl.as(ExtensionDeclSyntax.self)
     }
 }
