@@ -169,6 +169,7 @@ public struct EquatableMacro: ExtensionMacro {
             ) else {
                 return [extensionSyntax]
             }
+            
             return [extensionSyntax, hashableExtensionSyntax]
             
         } else {
