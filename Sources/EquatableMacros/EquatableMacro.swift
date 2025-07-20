@@ -161,7 +161,7 @@ public struct EquatableMacro: ExtensionMacro {
             return []
         }
         
-        // Check if the type conforms to `Hashable` and generate corresponding hash function if needed
+        // If the type conforms to `Hashable`, always generate a corresponding hash function aligned with the `Equatable` implementation
         if structDecl.isHashable {
             guard let hashableExtensionSyntax = Self.generateHashableExtensionSyntax(
                 sortedProperties: sortedProperties,
