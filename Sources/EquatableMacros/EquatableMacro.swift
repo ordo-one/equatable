@@ -99,7 +99,7 @@ public struct EquatableMacro: ExtensionMacro {
         "WKExtensionDelegateAdaptor"
     ]
 
-    // swiftlint:disable:next cyclomatic_complexity function_body_length
+    // swiftlint:disable:next function_body_length
     public static func expansion(
         of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
@@ -231,7 +231,7 @@ extension EquatableMacro {
         // "id" always comes first
         if lhs.name == "id" { return true }
         if rhs.name == "id" { return false }
-        
+
         let lhsComplexity = typeComplexity(lhs.type)
         let rhsComplexity = typeComplexity(rhs.type)
 
@@ -276,7 +276,7 @@ extension EquatableMacro {
             return 50
         }
     }
-    
+
     private static func makeClosureDiagnostic(for varDecl: VariableDeclSyntax) -> Diagnostic {
         let attribute = AttributeSyntax(
             leadingTrivia: .space,
