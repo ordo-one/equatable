@@ -40,7 +40,8 @@ let package = Package(
             name: "EquatableTests",
             dependencies: [
                 "EquatableMacros",
-                .product(name: "MacroTesting", package: "swift-macro-testing")
+                .product(name: "MacroTesting", package: "swift-macro-testing"),
+                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax")
             ]
         )
     ]
