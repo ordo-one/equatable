@@ -7,7 +7,7 @@ import SwiftSyntaxMacros
 /// A macro that automatically generates an `Equatable` conformance for structs.
 ///
 /// This macro creates a standard equality implementation by comparing all stored properties
-/// that aren't explicitly marked to be skipped with `@EquatableIgnored`.
+/// that aren't explicitly marked to be skipped with `@EquatableIgnored.
 /// Properties with SwiftUI property wrappers (like `@State`, `@ObservedObject`, etc.)
 ///
 /// Structs with arbitary closures are not supported unless they are marked explicitly with `@EquatableIgnoredUnsafeClosure` -
@@ -73,6 +73,77 @@ import SwiftSyntaxMacros
 ///     }
 /// }
 /// ```
+///
+///
+/// ## Isolation
+/// `Equatable` macro supports generating the conformance with different isolation levels by using the `isolation` parameter.
+///  The parameter accepts three values: `.nonisolated` (default), `.isolated`, and `.main` (requires Swift 6.2 or later).
+///  The chosen isolation level will be applied to the generated conformances for both `Equatable` and `Hashable` (if applicable).
+///
+///  ### Nonisolated (default)
+///  The generated `Equatable` conformance is `nonisolated`, meaning it can be called from any context without isolation guarantees.
+///  ```swift
+///  @Equatable(isolation: .nonisolated) (also ommiting the parameter uses this mode)
+///    struct Person {
+///     let name: String
+///     let age: Int
+///   }
+///  ```
+///
+///  expands to:
+///  ```swift
+///  extension Person: Equatable {
+///   nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
+///     lhs.name == rhs.name && lhs.age == rhs.age
+///    }
+///  }
+///  ```
+///
+///  ### Isolated
+///  The generated `Equatable` conformance is `isolated`, meaning it can only be called from within the actor's context.
+///  ```swift
+///  @Equatable(isolation: .isolated)
+///  struct Person {
+///     let name: String
+///     let age: Int
+///  }
+///  ```
+///
+///  expands to:
+///  ```swift
+///  extension Person: Equatable {
+///   public static func == (lhs: Person, rhs: Person) -> Bool {
+///     lhs.name == rhs.name && lhs.age == rhs.age
+///    }
+///  }
+///  ```
+///
+///  ### Main (requires Swift 6.2 or later)
+///  A common case  is to have a `@MainActor` isolated type, SwiftUI views being a common example. Previously, the generated `Equatable` conformance had to be `nonisolated` in order to satisfy the protocol requirement.
+///  This would then restrict us to access only nonisolated properties of the type in the generated `Equatable` function — which ment that we had to ignore all `@MainActor` isolated properties in the equality comparison.
+///  Swift 6.2 introduced [isolated confomances](https://docs.swift.org/compiler/documentation/diagnostics/isolated-conformances/) allowing us to generate  `Equatable` confomances
+///  which are bound to the `@MainActor`. In this way the generated `Equatable` conformance can access `@MainActor` isolated properties of the type synchonously and the compiler will guarantee that the confomance
+///  will be called only from the `@MainActor` context.
+///
+///  We can do so by specifying `@Equatable(isolation: .main)`, e.g:
+///  ```swift
+///  @Equatable(isolation: .main)
+///  @MainActor
+///  struct Person {
+///     let name: String
+///     let age: Int
+///  }
+///  ```
+///
+///  expands to:
+///  ```swift
+///  extension Person: Equatable {
+///     public static func == (lhs: Person, rhs: Person) -> Bool {
+///         lhs.name == rhs.name && lhs.age == rhs.age
+///     }
+///  }
+///  ```
+///
 public struct EquatableMacro: ExtensionMacro {
     private static let skippablePropertyWrappers: Set = [
         "AccessibilityFocusState",
@@ -107,6 +178,8 @@ public struct EquatableMacro: ExtensionMacro {
         conformingTo _: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
+        // Extract isolation argument from the macro
+        let isolation = extractIsolation(from: node) ?? .nonisolated
         // Ensure we're attached to a struct
         guard let structDecl = declaration.as(StructDeclSyntax.self) else {
             let diagnostic = Diagnostic(
@@ -138,7 +211,7 @@ public struct EquatableMacro: ExtensionMacro {
 
             // Check if it's a closure that should trigger diagnostic
             let isClosureProperty = (binding.typeAnnotation?.type).map(isClosure) == true ||
-            (binding.initializer?.value.is(ClosureExprSyntax.self) ?? false)
+                (binding.initializer?.value.is(ClosureExprSyntax.self) ?? false)
 
             if isClosureProperty {
                 let diagnostic = Self.makeClosureDiagnostic(for: varDecl)
@@ -151,12 +224,13 @@ public struct EquatableMacro: ExtensionMacro {
 
         // Sort properties: "id" first, then by type complexity
         let sortedProperties = storedProperties.sorted { lhs, rhs in
-            return Self.compare(lhs: lhs, rhs: rhs)
+            Self.compare(lhs: lhs, rhs: rhs)
         }
 
         guard let extensionSyntax = Self.generateEquatableExtensionSyntax(
             sortedProperties: sortedProperties,
-            type: type
+            type: type,
+            isolation: isolation
         ) else {
             return []
         }
@@ -165,7 +239,8 @@ public struct EquatableMacro: ExtensionMacro {
         if structDecl.isHashable {
             guard let hashableExtensionSyntax = Self.generateHashableExtensionSyntax(
                 sortedProperties: sortedProperties,
-                type: type
+                type: type,
+                isolation: isolation
             ) else {
                 return [extensionSyntax]
             }
@@ -177,11 +252,48 @@ public struct EquatableMacro: ExtensionMacro {
 }
 
 extension EquatableMacro {
+    private enum Isolation {
+        case nonisolated
+        case isolated
+        case main
+
+        var keyword: String {
+            switch self {
+            case .nonisolated: "nonisolated"
+            case .isolated: ""
+            case .main: "@MainActor "
+            }
+        }
+    }
+
+    private static func extractIsolation(from node: AttributeSyntax) -> Isolation? {
+        guard let arguments = node.arguments?.as(LabeledExprListSyntax.self) else {
+            return nil
+        }
+
+        for argument in arguments {
+            if argument.label?.text == "isolation" {
+                if let memberAccess = argument.expression.as(MemberAccessExprSyntax.self) {
+                    switch memberAccess.declName.baseName.text {
+                    case "isolated": return .isolated
+                    case "nonisolated": return .nonisolated
+                    #if swift(>=6.2)
+                        case "main": return .main
+                    #endif
+                    default: return nil
+                    }
+                }
+            }
+        }
+
+        return nil
+    }
+
     // Skip properties with SwiftUI attributes (like @State, @Binding, etc.) or if they are marked with @EqutableIgnored
     private static func shouldSkip(_ varDecl: VariableDeclSyntax) -> Bool {
         varDecl.attributes.contains { attribute in
             if let atribute = attribute.as(AttributeSyntax.self),
-               Self.shouldSkip(atribute: atribute) {
+               shouldSkip(atribute: atribute) {
                 return true
             }
             return false
@@ -190,7 +302,7 @@ extension EquatableMacro {
 
     private static func shouldSkip(atribute node: AttributeSyntax) -> Bool {
         if let identifierType = node.attributeName.as(IdentifierTypeSyntax.self),
-           Self.shouldSkip(identifierType: identifierType) {
+           shouldSkip(identifierType: identifierType) {
             return true
         }
         if let memberType = node.attributeName.as(MemberTypeSyntax.self),
@@ -204,7 +316,7 @@ extension EquatableMacro {
         if node.name.text == "EquatableIgnored" {
             return true
         }
-        if Self.skippablePropertyWrappers.contains(node.name.text) {
+        if skippablePropertyWrappers.contains(node.name.text) {
             return true
         }
         return false
@@ -212,7 +324,7 @@ extension EquatableMacro {
 
     private static func shouldSkip(memberType node: MemberTypeSyntax) -> Bool {
         if node.baseType.as(IdentifierTypeSyntax.self)?.name.text == "SwiftUI",
-           Self.skippablePropertyWrappers.contains(node.name.text) {
+           skippablePropertyWrappers.contains(node.name.text) {
             return true
         }
         return false
@@ -311,16 +423,36 @@ extension EquatableMacro {
 
     private static func generateEquatableExtensionSyntax(
         sortedProperties: [(name: String, type: TypeSyntax?)],
-        type: TypeSyntaxProtocol
+        type: TypeSyntaxProtocol,
+        isolation: Isolation
     ) -> ExtensionDeclSyntax? {
         guard !sortedProperties.isEmpty else {
-            let extensionDecl: DeclSyntax = """
-            extension \(type): Equatable {
-                nonisolated public static func == (lhs: \(type), rhs: \(type)) -> Bool {
-                    true
+            let extensionDecl: DeclSyntax = switch isolation {
+            case .nonisolated:
+                """
+                extension \(type): Equatable {
+                    nonisolated public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                        true
+                    }
                 }
+                """
+            case .isolated:
+                """
+                extension \(type): Equatable {
+                    public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                        true
+                    }
+                }
+                """
+            case .main:
+                """
+                extension \(type): @MainActor Equatable {
+                    public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                        true
+                    }
+                }
+                """
             }
-            """
 
             return extensionDecl.as(ExtensionDeclSyntax.self)
         }
@@ -331,27 +463,62 @@ extension EquatableMacro {
 
         let equalityImplementation = comparisons.isEmpty ? "true" : comparisons
 
-        let extensionDecl: DeclSyntax = """
-        extension \(type): Equatable {
-            nonisolated public static func == (lhs: \(type), rhs: \(type)) -> Bool {
-                \(raw: equalityImplementation)
+        let extensionDecl: DeclSyntax = switch isolation {
+        case .nonisolated:
+            """
+            extension \(type): Equatable {
+                nonisolated public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                    \(raw: equalityImplementation)
+                }
             }
+            """
+        case .isolated:
+            """
+            extension \(type): Equatable {
+                public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                    \(raw: equalityImplementation)
+                }
+            }
+            """
+        case .main:
+            """
+            extension \(type): @MainActor Equatable {
+                public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                    \(raw: equalityImplementation)
+                }
+            }
+            """
         }
-        """
 
         return extensionDecl.as(ExtensionDeclSyntax.self)
     }
 
     private static func generateHashableExtensionSyntax(
         sortedProperties: [(name: String, type: TypeSyntax?)],
-        type: TypeSyntaxProtocol
+        type: TypeSyntaxProtocol,
+        isolation: Isolation
     ) -> ExtensionDeclSyntax? {
         guard !sortedProperties.isEmpty else {
-            let hashableExtensionDecl: DeclSyntax = """
-            extension \(raw: type) {
-                nonisolated public func hash(into hasher: inout Hasher) {}
+            let hashableExtensionDecl: DeclSyntax = switch isolation {
+            case .nonisolated:
+                """
+                extension \(raw: type) {
+                    nonisolated public func hash(into hasher: inout Hasher) {}
+                }
+                """
+            case .isolated:
+                """
+                extension \(raw: type) {
+                    public func hash(into hasher: inout Hasher) {}
+                }
+                """
+            case .main:
+                """
+                extension \(raw: type) {
+                    public func hash(into hasher: inout Hasher) {}
+                }
+                """
             }
-            """
 
             return hashableExtensionDecl.as(ExtensionDeclSyntax.self)
         }
@@ -359,15 +526,34 @@ extension EquatableMacro {
         let hashableImplementation = sortedProperties.map { property in
             "hasher.combine(\(property.name))"
         }
-            .joined(separator: "\n")
+        .joined(separator: "\n")
 
-        let hashableExtensionDecl: DeclSyntax = """
-        extension \(raw: type) {
-            nonisolated public func hash(into hasher: inout Hasher) {
-                \(raw: hashableImplementation)
+        let hashableExtensionDecl: DeclSyntax = switch isolation {
+        case .nonisolated:
+            """
+            extension \(raw: type) {
+                nonisolated public func hash(into hasher: inout Hasher) {
+                    \(raw: hashableImplementation)
+                }
             }
+            """
+        case .isolated:
+            """
+            extension \(raw: type) {
+                public func hash(into hasher: inout Hasher) {
+                    \(raw: hashableImplementation)
+                }
+            }
+            """
+        case .main:
+            """
+            extension \(raw: type) {
+                public func hash(into hasher: inout Hasher) {
+                    \(raw: hashableImplementation)
+                }
+            }
+            """
         }
-        """
 
         return hashableExtensionDecl.as(ExtensionDeclSyntax.self)
     }
