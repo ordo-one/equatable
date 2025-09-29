@@ -30,81 +30,184 @@ func failureHander(_ failure: TestFailureSpec) {
 
 @Suite
 struct EquatableMacroTests {
-    @Test
-    func idIsComparedFirst() async throws {
-        assertMacroExpansion(
-            """
-            @Equatable
-            struct Person {
-                let name: String
-                let lastName: String
-                let random: String
-                let id: UUID
-            }
-            """,
-            expandedSource:
-            """
-            struct Person {
-                let name: String
-                let lastName: String
-                let random: String
-                let id: UUID
-            }
+    enum Isolation {
+        case nonisolated
+        case isolated
+        case main
+    }
 
+#if swift(>=6.2)
+    static let testArguments: [Isolation] = [
+        .nonisolated,
+        .isolated,
+        .main
+    ]
+#else
+    static let testArguments: [Isolation] = [
+        .nonisolated,
+        .isolated
+    ]
+#endif
+
+    static func equatableMacro(for isolation: Isolation) -> String {
+        switch isolation {
+        case .nonisolated:
+            return "@Equatable"
+        case .isolated:
+            return "@Equatable(isolation: .isolated)"
+        case .main:
+            return "@Equatable(isolation: .main)"
+        }
+    }
+
+    @Test(arguments: testArguments)
+    func idIsComparedFirst(isolation: Isolation) async throws {
+        let macro = EquatableMacroTests.equatableMacro(for: isolation)
+        let generatedConformance = switch isolation {
+        case .nonisolated:
+            """
             extension Person: Equatable {
                 nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
                     lhs.id == rhs.id && lhs.lastName == rhs.lastName && lhs.name == rhs.name && lhs.random == rhs.random
                 }
             }
+            """
+        case .isolated:
+            """
+            extension Person: Equatable {
+                public static func == (lhs: Person, rhs: Person) -> Bool {
+                    lhs.id == rhs.id && lhs.lastName == rhs.lastName && lhs.name == rhs.name && lhs.random == rhs.random
+                }
+            }
+            """
+        case .main:
+            """
+            extension Person: @MainActor Equatable {
+                public static func == (lhs: Person, rhs: Person) -> Bool {
+                    lhs.id == rhs.id && lhs.lastName == rhs.lastName && lhs.name == rhs.name && lhs.random == rhs.random
+                }
+            }
+            """
+        }
+        assertMacroExpansion(
+            """
+            \(macro)
+            struct Person {
+                let name: String
+                let lastName: String
+                let random: String
+                let id: UUID
+            }
+            """,
+            expandedSource:
+            """
+            struct Person {
+                let name: String
+                let lastName: String
+                let random: String
+                let id: UUID
+            }
+
+            \(generatedConformance)
             """,
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
     }
 
-    @Test
-    func basicTypesComparedBeforeComplex() async throws {
-        assertMacroExpansion(
+    @Test(arguments: testArguments)
+    func basicTypesComparedBeforeComplex(isolation: Isolation) async throws {
+        let macro = EquatableMacroTests.equatableMacro(for: isolation)
+        let generatedConformance = switch isolation {
+        case .nonisolated:
             """
-            struct NestedType: Equatable {
-                let nestedInt: Int
-            }
-            @Equatable
-            struct A {
-                let nestedType: NestedType
-                let array: [Int]
-                let basicInt: Int
-                let basicString: String
-            }
-            """,
-            expandedSource:
-            """
-            struct NestedType: Equatable {
-                let nestedInt: Int
-            }
-            struct A {
-                let nestedType: NestedType
-                let array: [Int]
-                let basicInt: Int
-                let basicString: String
-            }
-
             extension A: Equatable {
                 nonisolated public static func == (lhs: A, rhs: A) -> Bool {
                     lhs.basicInt == rhs.basicInt && lhs.basicString == rhs.basicString && lhs.array == rhs.array && lhs.nestedType == rhs.nestedType
                 }
             }
+            """
+        case .isolated:
+            """
+            extension A: Equatable {
+                public static func == (lhs: A, rhs: A) -> Bool {
+                    lhs.basicInt == rhs.basicInt && lhs.basicString == rhs.basicString && lhs.array == rhs.array && lhs.nestedType == rhs.nestedType
+                }
+            }
+            """
+        case .main:
+            """
+            extension A: @MainActor Equatable {
+                public static func == (lhs: A, rhs: A) -> Bool {
+                    lhs.basicInt == rhs.basicInt && lhs.basicString == rhs.basicString && lhs.array == rhs.array && lhs.nestedType == rhs.nestedType
+                }
+            }
+            """
+        }
+        assertMacroExpansion(
+            """
+            struct NestedType: Equatable {
+                let nestedInt: Int
+            }
+            \(macro)
+            struct A {
+                let nestedType: NestedType
+                let array: [Int]
+                let basicInt: Int
+                let basicString: String
+            }
+            """,
+            expandedSource:
+            """
+            struct NestedType: Equatable {
+                let nestedInt: Int
+            }
+            struct A {
+                let nestedType: NestedType
+                let array: [Int]
+                let basicInt: Int
+                let basicString: String
+            }
+
+            \(generatedConformance)
             """,
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
     }
 
-    @Test
-    func swiftUIWrappedPropertiesSkipped() async throws {
+    @Test(arguments: testArguments)
+    func swiftUIWrappedPropertiesSkipped(isolation: Isolation) async throws {
+        let macro = EquatableMacroTests.equatableMacro(for: isolation)
+        let generatedConformance = switch isolation {
+        case .nonisolated:
+            """
+            extension TitleView: Equatable {
+                nonisolated public static func == (lhs: TitleView, rhs: TitleView) -> Bool {
+                    lhs.title == rhs.title
+                }
+            }
+            """
+        case .isolated:
+            """
+            extension TitleView: Equatable {
+                public static func == (lhs: TitleView, rhs: TitleView) -> Bool {
+                    lhs.title == rhs.title
+                }
+            }
+            """
+        case .main:
+            """
+            extension TitleView: @MainActor Equatable {
+                public static func == (lhs: TitleView, rhs: TitleView) -> Bool {
+                    lhs.title == rhs.title
+                }
+            }
+            """
+        }
         assertMacroExpansion(
             """
-            @Equatable
+            \(macro)
             struct TitleView: View {
                 @AccessibilityFocusState var accessibilityFocusState: Bool
                 @AppStorage("title") var appTitle: String = "App Title"
@@ -114,8 +217,8 @@ struct EquatableMacroTests {
                 @FetchRequest(sortDescriptors: [SortDescriptor(\\.time, order: .reverse)]) var quakes: FetchedResults<Quake>
                 @FocusState var isFocused: Bool
                 @FocusedObject var focusedObject = FocusModel()
-                @FocusedValue(\\.focusedValue) var focusedValue 
-                @GestureState private var isDetectingLongPress = false            
+                @FocusedValue(\\.focusedValue) var focusedValue
+                @GestureState private var isDetectingLongPress = false
                 @NSApplicationDelegateAdaptor private var appDelegate: MyAppDelegate
                 @Namespace var namespace
                 @ObservedObject var anotherViewModel = AnotherViewModel()
@@ -147,8 +250,8 @@ struct EquatableMacroTests {
                 @FetchRequest(sortDescriptors: [SortDescriptor(\\.time, order: .reverse)]) var quakes: FetchedResults<Quake>
                 @FocusState var isFocused: Bool
                 @FocusedObject var focusedObject = FocusModel()
-                @FocusedValue(\\.focusedValue) var focusedValue 
-                @GestureState private var isDetectingLongPress = false            
+                @FocusedValue(\\.focusedValue) var focusedValue
+                @GestureState private var isDetectingLongPress = false
                 @NSApplicationDelegateAdaptor private var appDelegate: MyAppDelegate
                 @Namespace var namespace
                 @ObservedObject var anotherViewModel = AnotherViewModel()
@@ -169,22 +272,45 @@ struct EquatableMacroTests {
                 }
             }
 
-            extension TitleView: Equatable {
-                nonisolated public static func == (lhs: TitleView, rhs: TitleView) -> Bool {
-                    lhs.title == rhs.title
-                }
-            }
+            \(generatedConformance)
             """,
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
     }
 
-    @Test
-    func memberSwiftUIWrappedPropertiesSkipped() async throws {
+    @Test(arguments: testArguments)
+    func memberSwiftUIWrappedPropertiesSkipped(isolation: Isolation) async throws {
+        let macro = EquatableMacroTests.equatableMacro(for: isolation)
+        let generatedConformance = switch isolation {
+        case .nonisolated:
+            """
+            extension TitleView: Equatable {
+                nonisolated public static func == (lhs: TitleView, rhs: TitleView) -> Bool {
+                    lhs.title == rhs.title
+                }
+            }
+            """
+        case .isolated:
+            """
+            extension TitleView: Equatable {
+                public static func == (lhs: TitleView, rhs: TitleView) -> Bool {
+                    lhs.title == rhs.title
+                }
+            }
+            """
+        case .main:
+            """
+            extension TitleView: @MainActor Equatable {
+                public static func == (lhs: TitleView, rhs: TitleView) -> Bool {
+                    lhs.title == rhs.title
+                }
+            }
+            """
+        }
         assertMacroExpansion(
             """
-            @Equatable
+            \(macro)
             struct TitleView: View {
                 @SwiftUI.AccessibilityFocusState var accessibilityFocusState: Bool
                 @SwiftUI.AppStorage("title") var appTitle: String = "App Title"
@@ -249,22 +375,45 @@ struct EquatableMacroTests {
                 }
             }
 
-            extension TitleView: Equatable {
-                nonisolated public static func == (lhs: TitleView, rhs: TitleView) -> Bool {
-                    lhs.title == rhs.title
-                }
-            }
+            \(generatedConformance)
             """,
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
     }
 
-    @Test
-    func markedWithEquatableIgnoredSkipped() async throws {
+    @Test(arguments: testArguments)
+    func markedWithEquatableIgnoredSkipped(isolation: Isolation) async throws {
+        let macro = EquatableMacroTests.equatableMacro(for: isolation)
+        let generatedConformance = switch isolation {
+        case .nonisolated:
+            """
+            extension BandView: Equatable {
+                nonisolated public static func == (lhs: BandView, rhs: BandView) -> Bool {
+                    lhs.name == rhs.name
+                }
+            }
+            """
+        case .isolated:
+            """
+            extension BandView: Equatable {
+                public static func == (lhs: BandView, rhs: BandView) -> Bool {
+                    lhs.name == rhs.name
+                }
+            }
+            """
+        case .main:
+            """
+            extension BandView: @MainActor Equatable {
+                public static func == (lhs: BandView, rhs: BandView) -> Bool {
+                    lhs.name == rhs.name
+                }
+            }
+            """
+        }
         assertMacroExpansion(
             """
-            @Equatable
+            \(macro)
             struct BandView: View {
                 @EquatableIgnored let year: Int
                 let name: String
@@ -291,11 +440,7 @@ struct EquatableMacroTests {
                 }
             }
 
-            extension BandView: Equatable {
-                nonisolated public static func == (lhs: BandView, rhs: BandView) -> Bool {
-                    lhs.name == rhs.name
-                }
-            }
+            \(generatedConformance)
             """,
             macroSpecs: macroSpecs,
             failureHandler: failureHander
@@ -420,8 +565,8 @@ struct EquatableMacroTests {
         )
     }
 
-    @Test
-    func arbitaryClosuresNotAllowed() async throws {
+    @Test(arguments: testArguments)
+    func arbitaryClosuresNotAllowed(isolation: Isolation) async throws {
         // There is a bug in assertMacro somewhere and it produces the fixit with
         //
         //        @Equatable
@@ -434,9 +579,36 @@ struct EquatableMacroTests {
         //            }
         //        }
         // In reality the fix it works as expected and adds a \n between the @EquatableIgnoredUnsafeClosure and name variable.
+        let macro = EquatableMacroTests.equatableMacro(for: isolation)
+        let generatedConformance = switch isolation {
+        case .nonisolated:
+            """
+            extension CustomView: Equatable {
+                nonisolated public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
+                    lhs.name == rhs.name
+                }
+            }
+            """
+        case .isolated:
+            """
+            extension CustomView: Equatable {
+                public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
+                    lhs.name == rhs.name
+                }
+            }
+            """
+        case .main:
+            """
+            extension CustomView: @MainActor Equatable {
+                public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
+                    lhs.name == rhs.name
+                }
+            }
+            """
+        }
         assertMacroExpansion(
             """
-            @Equatable
+            \(macro)
             struct CustomView: View {
                 var name: String
                 let closure: (() -> Void)?
@@ -457,11 +629,7 @@ struct EquatableMacroTests {
                 }
             }
 
-            extension CustomView: Equatable {
-                nonisolated public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
-                    lhs.name == rhs.name
-                }
-            }
+            \(generatedConformance)
             """,
             diagnostics: [
                 DiagnosticSpec(
@@ -476,9 +644,9 @@ struct EquatableMacroTests {
             macroSpecs: macroSpecs,
             fixedSource:
             """
-            @Equatable
+            \(macro)
             struct CustomView: View {
-                var name: String @EquatableIgnoredUnsafeClosure 
+                var name: String @EquatableIgnoredUnsafeClosure
                 let closure: (() -> Void)?
 
                 var body: some View {
@@ -490,11 +658,38 @@ struct EquatableMacroTests {
         )
     }
 
-    @Test
-    func closuresMarkedWithEquatableIgnoredUnsafeClosure() async throws {
+    @Test(arguments: testArguments)
+    func closuresMarkedWithEquatableIgnoredUnsafeClosure(isolation: Isolation) async throws {
+        let macro = EquatableMacroTests.equatableMacro(for: isolation)
+        let generatedConformance = switch isolation {
+        case .nonisolated:
+            """
+            extension CustomView: Equatable {
+                nonisolated public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
+                    lhs.name == rhs.name
+                }
+            }
+            """
+        case .isolated:
+            """
+            extension CustomView: Equatable {
+                public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
+                    lhs.name == rhs.name
+                }
+            }
+            """
+        case .main:
+            """
+            extension CustomView: @MainActor Equatable {
+                public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
+                    lhs.name == rhs.name
+                }
+            }
+            """
+        }
         assertMacroExpansion(
             """
-            @Equatable
+            \(macro)
             struct CustomView: View {
                 @EquatableIgnoredUnsafeClosure let closure: (() -> Void)?
                 var name: String
@@ -515,57 +710,46 @@ struct EquatableMacroTests {
                 }
             }
 
-            extension CustomView: Equatable {
-                nonisolated public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
-                    lhs.name == rhs.name
-                }
-            }
+            \(generatedConformance)
             """,
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
     }
 
-    @Test
-    func noEquatableProperties() async throws {
-        assertMacroExpansion(
+    @Test(arguments: testArguments)
+    func noEquatableProperties(isolation: Isolation) async throws {
+        let macro = EquatableMacroTests.equatableMacro(for: isolation)
+        let generatedConformance = switch isolation {
+        case .nonisolated:
             """
-            @Equatable
-            struct NoProperties: View {
-                @EquatableIgnoredUnsafeClosure let onTap: () -> Void
-
-                var body: some View {
-                    Text("")
-                }
-            }
-            """,
-            expandedSource:
-            """
-            struct NoProperties: View {
-                let onTap: () -> Void
-
-                var body: some View {
-                    Text("")
-                }
-            }
-
             extension NoProperties: Equatable {
                 nonisolated public static func == (lhs: NoProperties, rhs: NoProperties) -> Bool {
                     true
                 }
             }
-            """,
-            macroSpecs: macroSpecs,
-            failureHandler: failureHander
-        )
-    }
-
-    @Test
-    func noEquatablePropertiesConformingToHashable() async throws {
+            """
+        case .isolated:
+            """
+            extension NoProperties: Equatable {
+                public static func == (lhs: NoProperties, rhs: NoProperties) -> Bool {
+                    true
+                }
+            }
+            """
+        case .main:
+            """
+            extension NoProperties: @MainActor Equatable {
+                public static func == (lhs: NoProperties, rhs: NoProperties) -> Bool {
+                    true
+                }
+            }
+            """
+        }
         assertMacroExpansion(
             """
-            @Equatable
-            struct NoProperties: View, Hashable {
+            \(macro)
+            struct NoProperties: View {
                 @EquatableIgnoredUnsafeClosure let onTap: () -> Void
 
                 var body: some View {
@@ -575,7 +759,7 @@ struct EquatableMacroTests {
             """,
             expandedSource:
             """
-            struct NoProperties: View, Hashable {
+            struct NoProperties: View {
                 let onTap: () -> Void
 
                 var body: some View {
@@ -583,6 +767,19 @@ struct EquatableMacroTests {
                 }
             }
 
+            \(generatedConformance)
+            """,
+            macroSpecs: macroSpecs,
+            failureHandler: failureHander
+        )
+    }
+
+    @Test(arguments: testArguments)
+    func noEquatablePropertiesConformingToHashable(isolation: Isolation) async throws {
+        let macro = EquatableMacroTests.equatableMacro(for: isolation)
+        let generatedConformances = switch isolation {
+        case .nonisolated:
+            """
             extension NoProperties: Equatable {
                 nonisolated public static func == (lhs: NoProperties, rhs: NoProperties) -> Bool {
                     true
@@ -593,14 +790,91 @@ struct EquatableMacroTests {
                 nonisolated public func hash(into hasher: inout Hasher) {
                 }
             }
+            """
+        case .isolated:
+            """
+            extension NoProperties: Equatable {
+                public static func == (lhs: NoProperties, rhs: NoProperties) -> Bool {
+                    true
+                }
+            }
+
+            extension NoProperties {
+                public func hash(into hasher: inout Hasher) {
+                }
+            }
+            """
+        case .main:
+            """
+            extension NoProperties: @MainActor Equatable {
+                public static func == (lhs: NoProperties, rhs: NoProperties) -> Bool {
+                    true
+                }
+            }
+
+            extension NoProperties {
+                public func hash(into hasher: inout Hasher) {
+                }
+            }
+            """
+        }
+        assertMacroExpansion(
+            """
+            \(macro)
+            struct NoProperties: View, Hashable {
+                @EquatableIgnoredUnsafeClosure let onTap: () -> Void
+
+                var body: some View {
+                    Text("")
+                }
+            }
+            """,
+            expandedSource:
+            """
+            struct NoProperties: View, Hashable {
+                let onTap: () -> Void
+
+                var body: some View {
+                    Text("")
+                }
+            }
+
+            \(generatedConformances)
             """,
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
     }
 
-    @Test
-    func equatableMacro() async throws {
+    @Test(arguments: testArguments)
+    func equatableMacro(isolation: Isolation) async throws {
+        let macro = EquatableMacroTests.equatableMacro(for: isolation)
+        let generatedConformance = switch isolation {
+        case .nonisolated:
+            """
+            extension ContentView: Equatable {
+                nonisolated public static func == (lhs: ContentView, rhs: ContentView) -> Bool {
+                    lhs.id == rhs.id && lhs.hour == rhs.hour && lhs.name == rhs.name && lhs.color == rhs.color && lhs.customType == rhs.customType
+                }
+            }
+            """
+        case .isolated:
+            """
+            extension ContentView: Equatable {
+                public static func == (lhs: ContentView, rhs: ContentView) -> Bool {
+                    lhs.id == rhs.id && lhs.hour == rhs.hour && lhs.name == rhs.name && lhs.color == rhs.color && lhs.customType == rhs.customType
+                }
+            }
+            """
+        case .main:
+            """
+            extension ContentView: @MainActor Equatable {
+                public static func == (lhs: ContentView, rhs: ContentView) -> Bool {
+                    lhs.id == rhs.id && lhs.hour == rhs.hour && lhs.name == rhs.name && lhs.color == rhs.color && lhs.customType == rhs.customType
+                }
+            }
+            """
+        }
         assertMacroExpansion(
             """
             struct CustomType: Equatable {
@@ -617,7 +891,7 @@ struct EquatableMacroTests {
                 }
             }
 
-            @Equatable
+            \(macro)
             struct ContentView: View {
                 @State private var count = 0
                 let customType: CustomType
@@ -679,11 +953,7 @@ struct EquatableMacroTests {
                 }
             }
 
-            extension ContentView: Equatable {
-                nonisolated public static func == (lhs: ContentView, rhs: ContentView) -> Bool {
-                    lhs.id == rhs.id && lhs.hour == rhs.hour && lhs.name == rhs.name && lhs.color == rhs.color && lhs.customType == rhs.customType
-                }
-            }
+            \(generatedConformance)
             """,
             macroSpecs: macroSpecs,
             failureHandler: failureHander
@@ -717,11 +987,38 @@ struct EquatableMacroTests {
         )
     }
 
-    @Test
-    func arrayProperties() async throws {
+    @Test(arguments: testArguments)
+    func arrayProperties(isolation: Isolation) async throws {
+        let macro = EquatableMacroTests.equatableMacro(for: isolation)
+        let generatedConformance = switch isolation {
+        case .nonisolated:
+            """
+            extension Person: Equatable {
+                nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
+                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
+                }
+            }
+            """
+        case .isolated:
+            """
+            extension Person: Equatable {
+                public static func == (lhs: Person, rhs: Person) -> Bool {
+                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
+                }
+            }
+            """
+        case .main:
+            """
+            extension Person: @MainActor Equatable {
+                public static func == (lhs: Person, rhs: Person) -> Bool {
+                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
+                }
+            }
+            """
+        }
         assertMacroExpansion(
             """
-            @Equatable
+            \(macro)
             struct Person {
                 struct NestedType: Equatable {
                     let nestedInt: Int
@@ -746,22 +1043,45 @@ struct EquatableMacroTests {
                 let nestedType: NestedType
             }
 
-            extension Person: Equatable {
-                nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
-                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
-                }
-            }
+            \(generatedConformance)
             """,
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
     }
 
-    @Test
-    func dictionaryProperties() async throws {
+    @Test(arguments: testArguments)
+    func dictionaryProperties(isolation: Isolation) async throws {
+        let macro = EquatableMacroTests.equatableMacro(for: isolation)
+        let generatedConformance = switch isolation {
+        case .nonisolated:
+            """
+            extension Person: Equatable {
+                nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
+                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
+                }
+            }
+            """
+        case .isolated:
+            """
+            extension Person: Equatable {
+                public static func == (lhs: Person, rhs: Person) -> Bool {
+                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
+                }
+            }
+            """
+        case .main:
+            """
+            extension Person: @MainActor Equatable {
+                public static func == (lhs: Person, rhs: Person) -> Bool {
+                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
+                }
+            }
+            """
+        }
         assertMacroExpansion(
             """
-            @Equatable
+            \(macro)
             struct Person {
                 struct NestedType: Equatable {
                     let nestedInt: Int
@@ -786,22 +1106,69 @@ struct EquatableMacroTests {
                 let nestedType: NestedType
             }
 
-            extension Person: Equatable {
-                nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
-                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
-                }
-            }
+            \(generatedConformance)
             """,
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
     }
 
-    @Test
-    func generateHashableConformanceWhenTypesConformsToHashable() async throws {
+    @Test(arguments: testArguments)
+    func generateHashableConformanceWhenTypesConformsToHashable(isolation: Isolation) async throws {
+        let macro = EquatableMacroTests.equatableMacro(for: isolation)
+        let generatedConformances = switch isolation {
+        case .nonisolated:
+            """
+            extension User: Equatable {
+                nonisolated public static func == (lhs: User, rhs: User) -> Bool {
+                    lhs.id == rhs.id && lhs.age == rhs.age && lhs.name == rhs.name
+                }
+            }
+
+            extension User {
+                nonisolated public func hash(into hasher: inout Hasher) {
+                    hasher.combine(id)
+                    hasher.combine(age)
+                    hasher.combine(name)
+                }
+            }
+            """
+        case .isolated:
+            """
+            extension User: Equatable {
+                public static func == (lhs: User, rhs: User) -> Bool {
+                    lhs.id == rhs.id && lhs.age == rhs.age && lhs.name == rhs.name
+                }
+            }
+
+            extension User {
+                public func hash(into hasher: inout Hasher) {
+                    hasher.combine(id)
+                    hasher.combine(age)
+                    hasher.combine(name)
+                }
+            }
+            """
+        case .main:
+            """
+            extension User: @MainActor Equatable {
+                public static func == (lhs: User, rhs: User) -> Bool {
+                    lhs.id == rhs.id && lhs.age == rhs.age && lhs.name == rhs.name
+                }
+            }
+
+            extension User {
+                public func hash(into hasher: inout Hasher) {
+                    hasher.combine(id)
+                    hasher.combine(age)
+                    hasher.combine(name)
+                }
+            }
+            """
+        }
         assertMacroExpansion(
             """
-            @Equatable
+            \(macro)
             struct User: Hashable {
               let id: Int
               @EquatableIgnored
@@ -822,19 +1189,7 @@ struct EquatableMacroTests {
               var name: String
             }
 
-            extension User: Equatable {
-                nonisolated public static func == (lhs: User, rhs: User) -> Bool {
-                    lhs.id == rhs.id && lhs.age == rhs.age && lhs.name == rhs.name
-                }
-            }
-
-            extension User {
-                nonisolated public func hash(into hasher: inout Hasher) {
-                    hasher.combine(id)
-                    hasher.combine(age)
-                    hasher.combine(name)
-                }
-            }
+            \(generatedConformances)
             """,
             macroSpecs: macroSpecs,
             failureHandler: failureHander
