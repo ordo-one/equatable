@@ -1326,6 +1326,41 @@ struct EquatableMacroTests {
             failureHandler: failureHander
         )
     }
+
+    // In practice this is not possible because the compiler won't allow it
+    // but we test it anyway to make sure the macro defaults to nonisolated
+    // to satisfy code coverage :)
+    @Test
+    func nonExistingIsolationCase() async throws {
+        assertMacroExpansion(
+            """
+            @Equatable(isolation: .nonExistingIsolationCase)
+            struct Person {
+                let name: String
+                let lastName: String
+                let random: String
+                let id: UUID
+            }
+            """,
+            expandedSource:
+            """
+            struct Person {
+                let name: String
+                let lastName: String
+                let random: String
+                let id: UUID
+            }
+
+            extension Person: Equatable {
+                nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
+                    lhs.id == rhs.id && lhs.name == rhs.name && lhs.lastName == rhs.lastName && lhs.random == rhs.random
+                }
+            }
+            """,
+            macroSpecs: macroSpecs,
+            failureHandler: failureHander
+        )
+    }
 }
 
 // swiftlint:enable all

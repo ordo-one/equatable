@@ -9,14 +9,6 @@ extension EquatableMacro {
         case nonisolated
         case isolated
         case main
-
-        var keyword: String {
-            switch self {
-            case .nonisolated: "nonisolated"
-            case .isolated: ""
-            case .main: "@MainActor "
-            }
-        }
     }
 
     static func extractIsolation(from node: AttributeSyntax) -> Isolation? {
