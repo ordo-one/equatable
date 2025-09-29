@@ -132,6 +132,7 @@ import Equatable
         @EquatableIgnored var name = ""
     }
 
+#if swift(>=6.2)
 @Equatable(isolation: .main)
 @MainActor
 struct MainActorView: View {
@@ -142,4 +143,6 @@ struct MainActorView: View {
         Text("MainActorView a: \(a) b: \(b)")
     }
 }
+#endif
+
 #endif
