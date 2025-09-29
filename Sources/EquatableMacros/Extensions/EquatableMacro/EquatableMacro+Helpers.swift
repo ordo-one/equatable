@@ -64,7 +64,7 @@ extension EquatableMacro {
         let rhsComplexity = typeComplexity(rhs.type)
 
         if lhsComplexity == rhsComplexity {
-            return lhs.name < rhs.name
+            return false
         }
         return lhsComplexity < rhsComplexity
     }
