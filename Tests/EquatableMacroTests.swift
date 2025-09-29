@@ -841,43 +841,43 @@ struct EquatableMacroTests {
         )
     }
 
-#if swift(>=6.2)
-    @Test
-    func isolationMainActor() async throws {
-        assertMacroExpansion(
-            """
-            @Equatable(isolation: .main)
-            struct MainActorView: View {
-                let a: Int 
-                let name: String
-            
-                var body: some View {
-                    Text("MainActorView")
-                }
-            }
-            """,
-            expandedSource:
-            """
-            struct MainActorView: View {
-                let a: Int 
-                let name: String
-            
-                var body: some View {
-                    Text("MainActorView")
-                }
-            }
+    #if swift(>=6.2)
+        @Test
+        func isolationMainActor() async throws {
+            assertMacroExpansion(
+                """
+                @Equatable(isolation: .main)
+                struct MainActorView: View {
+                    let a: Int 
+                    let name: String
 
-            extension MainActorView: @MainActor Equatable {
-                public static func == (lhs: MainActorView, rhs: MainActorView) -> Bool {
-                    lhs.a == rhs.a && lhs.name == rhs.name
+                    var body: some View {
+                        Text("MainActorView")
+                    }
                 }
-            }
-            """,
-            macroSpecs: macroSpecs,
-            failureHandler: failureHander
-        )
-    }
-#endif
+                """,
+                expandedSource:
+                """
+                struct MainActorView: View {
+                    let a: Int 
+                    let name: String
+
+                    var body: some View {
+                        Text("MainActorView")
+                    }
+                }
+
+                extension MainActorView: @MainActor Equatable {
+                    public static func == (lhs: MainActorView, rhs: MainActorView) -> Bool {
+                        lhs.a == rhs.a && lhs.name == rhs.name
+                    }
+                }
+                """,
+                macroSpecs: macroSpecs,
+                failureHandler: failureHander
+            )
+        }
+    #endif
     @Test
     func isolationIsolated() async throws {
         assertMacroExpansion(

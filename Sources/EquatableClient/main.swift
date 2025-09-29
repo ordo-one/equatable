@@ -132,17 +132,17 @@ import Equatable
         @EquatableIgnored var name = ""
     }
 
-#if swift(>=6.2)
-@Equatable(isolation: .main)
-@MainActor
-struct MainActorView: View {
-    let a: Int = 23
-    let b: String = "Hello"
+    #if swift(>=6.2)
+        @Equatable(isolation: .main)
+        @MainActor
+        struct MainActorView: View {
+            let integer: Int = 23
+            let string: String = "Hello"
 
-    var body: some View {
-        Text("MainActorView a: \(a) b: \(b)")
-    }
-}
-#endif
+            var body: some View {
+                Text("MainActorView a: \(integer) b: \(string)")
+            }
+        }
+    #endif
 
 #endif

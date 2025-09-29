@@ -148,8 +148,8 @@ public enum Isolation {
     /// The generated `Equatable` conformance is`isolated`.
     case isolated
     #if swift(>=6.2)
-    /// The generated `Equatable` conformance is `@MainActor` isolated.
-    case main
+        /// The generated `Equatable` conformance is `@MainActor` isolated.
+        case main
     #endif
 }
 
