@@ -96,9 +96,9 @@ struct Person {
 expands to:
 ```swift
 extension Person: Equatable {
-nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
+  nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
     lhs.name == rhs.name && lhs.age == rhs.age
-}
+  }
 }
 ```
 
@@ -115,9 +115,9 @@ struct Person {
 expands to:
 ```swift
 extension Person: Equatable {
-public static func == (lhs: Person, rhs: Person) -> Bool {
+  public static func == (lhs: Person, rhs: Person) -> Bool {
     lhs.name == rhs.name && lhs.age == rhs.age
-}
+  }
 }
 ```
 
@@ -140,7 +140,7 @@ struct Person {
 
 expands to:
 ```swift
-extension Person: Equatable {
+extension Person: @MainActor Equatable {
     public static func == (lhs: Person, rhs: Person) -> Bool {
         lhs.name == rhs.name && lhs.age == rhs.age
     }
