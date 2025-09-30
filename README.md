@@ -78,6 +78,75 @@ extension ProfileView: Equatable {
 }
 ```
 
+ ## Isolation
+`Equatable` macro supports generating the conformance with different isolation levels by using the `isolation` parameter.
+The parameter accepts three values: `.nonisolated` (default), `.isolated`, and `.main` (requires Swift 6.2 or later).
+The chosen isolation level will be applied to the generated conformances for both `Equatable` and `Hashable` (if applicable).
+
+### Nonisolated (default)
+The generated `Equatable` conformance is `nonisolated`, meaning it can be called from any context without isolation guarantees.
+```swift
+@Equatable(isolation: .nonisolated) (also omitting the parameter uses this mode)
+struct Person {
+    let name: String
+    let age: Int
+}
+```
+
+expands to:
+```swift
+extension Person: Equatable {
+nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
+    lhs.name == rhs.name && lhs.age == rhs.age
+}
+}
+```
+
+### Isolated
+The generated `Equatable` conformance is `isolated`, meaning it can only be called from within the actor's context.
+```swift
+@Equatable(isolation: .isolated)
+struct Person {
+    let name: String
+    let age: Int
+}
+```
+
+expands to:
+```swift
+extension Person: Equatable {
+public static func == (lhs: Person, rhs: Person) -> Bool {
+    lhs.name == rhs.name && lhs.age == rhs.age
+}
+}
+```
+
+### Main (requires Swift 6.2 or later)
+A common case is to have a `@MainActor` isolated type, SwiftUI views being a common example. Previously, the generated `Equatable` conformance had to be `nonisolated` in order to satisfy the protocol requirement.
+This would then restrict us to access only nonisolated properties of the type in the generated `Equatable` function — which meant that we had to ignore all `@MainActor` isolated properties in the equality comparison.
+Swift 6.2 introduced [isolated conformances](https://docs.swift.org/compiler/documentation/diagnostics/isolated-conformances/) allowing us to generate `Equatable` conformances
+which are bound to the `@MainActor`. In this way the generated `Equatable` conformance can access `@MainActor` isolated properties of the type synchronously and the compiler will guarantee that the conformance
+will be called only from the `@MainActor` context.
+
+We can do so by specifying `@Equatable(isolation: .main)`, e.g:
+```swift
+@Equatable(isolation: .main)
+@MainActor
+struct Person {
+    let name: String
+    let age: Int
+}
+```
+
+expands to:
+```swift
+extension Person: Equatable {
+    public static func == (lhs: Person, rhs: Person) -> Bool {
+        lhs.name == rhs.name && lhs.age == rhs.age
+    }
+}
+```
+
 ## Safety Considerations
 
 Closures marked with `@EquatableIgnoredUnsafeClosure` should not affect the logical identity of the type. For example:
@@ -148,9 +217,8 @@ import Equatable
 @Equatable
 struct User: Hashable {
 
-let id: Int
-
-@EquatableIgnored var name = ""
+    let id: Int
+    @EquatableIgnored var name = ""
 }
 ```
 
