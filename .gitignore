@@ -47,9 +47,9 @@ playground.xcworkspace
 # Swift Package Manager
 #
 # Add this line if you want to avoid checking in source code from Swift Package Manager dependencies.
-# Packages/
-# Package.pins
-# Package.resolved
+Packages/
+Package.pins
+Package.resolved
 # *.xcodeproj
 #
 # Xcode automatically generates this directory with a .xcworkspacedata file and xcuserdata
@@ -57,7 +57,6 @@ playground.xcworkspace
 .swiftpm
 .DS_Store
 .build/
-.vscode/
 
 # CocoaPods
 #
@@ -99,7 +98,3 @@ fastlane/test_output
 # https://github.com/johnno1962/injectionforxcode
 
 iOSInjectionProject/
-
-# Ignore all bazel-* symlinks. There is no full list since this can change
-# based on the name of the directory bazel is cloned into.
-/bazel-*
