@@ -17,6 +17,12 @@ import Equatable
         @EquatableIgnoredUnsafeClosure let closure: (() -> Void)?
     }
 
+    @Equatable
+    struct TestGenericContent<Content: View> {
+        let name: String
+        @EquatableIgnoredUnsafeClosure let closure: (() -> Content)?
+    }
+
     struct CustomType: Equatable {
         let name: String
         let lastName: String
