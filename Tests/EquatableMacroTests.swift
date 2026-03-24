@@ -67,7 +67,7 @@ struct EquatableMacroTests {
         case .nonisolated:
             """
             extension Person: Equatable {
-                nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.id == rhs.id && lhs.name == rhs.name && lhs.lastName == rhs.lastName && lhs.random == rhs.random
                 }
             }
@@ -75,7 +75,7 @@ struct EquatableMacroTests {
         case .isolated:
             """
             extension Person: Equatable {
-                public static func == (lhs: Person, rhs: Person) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.id == rhs.id && lhs.name == rhs.name && lhs.lastName == rhs.lastName && lhs.random == rhs.random
                 }
             }
@@ -83,7 +83,7 @@ struct EquatableMacroTests {
         case .main:
             """
             extension Person: @MainActor Equatable {
-                public static func == (lhs: Person, rhs: Person) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.id == rhs.id && lhs.name == rhs.name && lhs.lastName == rhs.lastName && lhs.random == rhs.random
                 }
             }
@@ -122,7 +122,7 @@ struct EquatableMacroTests {
         case .nonisolated:
             """
             extension A: Equatable {
-                nonisolated public static func == (lhs: A, rhs: A) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.basicInt == rhs.basicInt && lhs.basicString == rhs.basicString && lhs.array == rhs.array && lhs.nestedType == rhs.nestedType
                 }
             }
@@ -130,7 +130,7 @@ struct EquatableMacroTests {
         case .isolated:
             """
             extension A: Equatable {
-                public static func == (lhs: A, rhs: A) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.basicInt == rhs.basicInt && lhs.basicString == rhs.basicString && lhs.array == rhs.array && lhs.nestedType == rhs.nestedType
                 }
             }
@@ -138,7 +138,7 @@ struct EquatableMacroTests {
         case .main:
             """
             extension A: @MainActor Equatable {
-                public static func == (lhs: A, rhs: A) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.basicInt == rhs.basicInt && lhs.basicString == rhs.basicString && lhs.array == rhs.array && lhs.nestedType == rhs.nestedType
                 }
             }
@@ -183,7 +183,7 @@ struct EquatableMacroTests {
         case .nonisolated:
             """
             extension TitleView: Equatable {
-                nonisolated public static func == (lhs: TitleView, rhs: TitleView) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.title == rhs.title
                 }
             }
@@ -191,7 +191,7 @@ struct EquatableMacroTests {
         case .isolated:
             """
             extension TitleView: Equatable {
-                public static func == (lhs: TitleView, rhs: TitleView) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.title == rhs.title
                 }
             }
@@ -199,7 +199,7 @@ struct EquatableMacroTests {
         case .main:
             """
             extension TitleView: @MainActor Equatable {
-                public static func == (lhs: TitleView, rhs: TitleView) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.title == rhs.title
                 }
             }
@@ -286,7 +286,7 @@ struct EquatableMacroTests {
         case .nonisolated:
             """
             extension TitleView: Equatable {
-                nonisolated public static func == (lhs: TitleView, rhs: TitleView) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.title == rhs.title
                 }
             }
@@ -294,7 +294,7 @@ struct EquatableMacroTests {
         case .isolated:
             """
             extension TitleView: Equatable {
-                public static func == (lhs: TitleView, rhs: TitleView) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.title == rhs.title
                 }
             }
@@ -302,7 +302,7 @@ struct EquatableMacroTests {
         case .main:
             """
             extension TitleView: @MainActor Equatable {
-                public static func == (lhs: TitleView, rhs: TitleView) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.title == rhs.title
                 }
             }
@@ -389,7 +389,7 @@ struct EquatableMacroTests {
         case .nonisolated:
             """
             extension BandView: Equatable {
-                nonisolated public static func == (lhs: BandView, rhs: BandView) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.name == rhs.name
                 }
             }
@@ -397,7 +397,7 @@ struct EquatableMacroTests {
         case .isolated:
             """
             extension BandView: Equatable {
-                public static func == (lhs: BandView, rhs: BandView) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.name == rhs.name
                 }
             }
@@ -405,7 +405,7 @@ struct EquatableMacroTests {
         case .main:
             """
             extension BandView: @MainActor Equatable {
-                public static func == (lhs: BandView, rhs: BandView) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.name == rhs.name
                 }
             }
@@ -507,7 +507,7 @@ struct EquatableMacroTests {
             }
 
             extension CustomView: Equatable {
-                nonisolated public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     true
                 }
             }
@@ -548,7 +548,7 @@ struct EquatableMacroTests {
             }
 
             extension CustomView: Equatable {
-                nonisolated public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     true
                 }
             }
@@ -584,7 +584,7 @@ struct EquatableMacroTests {
         case .nonisolated:
             """
             extension CustomView: Equatable {
-                nonisolated public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.name == rhs.name
                 }
             }
@@ -592,7 +592,7 @@ struct EquatableMacroTests {
         case .isolated:
             """
             extension CustomView: Equatable {
-                public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.name == rhs.name
                 }
             }
@@ -600,7 +600,7 @@ struct EquatableMacroTests {
         case .main:
             """
             extension CustomView: @MainActor Equatable {
-                public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.name == rhs.name
                 }
             }
@@ -665,7 +665,7 @@ struct EquatableMacroTests {
         case .nonisolated:
             """
             extension CustomView: Equatable {
-                nonisolated public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.name == rhs.name
                 }
             }
@@ -673,7 +673,7 @@ struct EquatableMacroTests {
         case .isolated:
             """
             extension CustomView: Equatable {
-                public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.name == rhs.name
                 }
             }
@@ -681,7 +681,7 @@ struct EquatableMacroTests {
         case .main:
             """
             extension CustomView: @MainActor Equatable {
-                public static func == (lhs: CustomView, rhs: CustomView) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.name == rhs.name
                 }
             }
@@ -724,7 +724,7 @@ struct EquatableMacroTests {
         case .nonisolated:
             """
             extension NoProperties: Equatable {
-                nonisolated public static func == (lhs: NoProperties, rhs: NoProperties) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     true
                 }
             }
@@ -732,7 +732,7 @@ struct EquatableMacroTests {
         case .isolated:
             """
             extension NoProperties: Equatable {
-                public static func == (lhs: NoProperties, rhs: NoProperties) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     true
                 }
             }
@@ -740,7 +740,7 @@ struct EquatableMacroTests {
         case .main:
             """
             extension NoProperties: @MainActor Equatable {
-                public static func == (lhs: NoProperties, rhs: NoProperties) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     true
                 }
             }
@@ -781,7 +781,7 @@ struct EquatableMacroTests {
         case .nonisolated:
             """
             extension NoProperties: Equatable {
-                nonisolated public static func == (lhs: NoProperties, rhs: NoProperties) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     true
                 }
             }
@@ -794,7 +794,7 @@ struct EquatableMacroTests {
         case .isolated:
             """
             extension NoProperties: Equatable {
-                public static func == (lhs: NoProperties, rhs: NoProperties) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     true
                 }
             }
@@ -807,7 +807,7 @@ struct EquatableMacroTests {
         case .main:
             """
             extension NoProperties: @MainActor Equatable {
-                public static func == (lhs: NoProperties, rhs: NoProperties) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     true
                 }
             }
@@ -853,7 +853,7 @@ struct EquatableMacroTests {
         case .nonisolated:
             """
             extension ContentView: Equatable {
-                nonisolated public static func == (lhs: ContentView, rhs: ContentView) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.id == rhs.id && lhs.hour == rhs.hour && lhs.name == rhs.name && lhs.customType == rhs.customType && lhs.color == rhs.color
                 }
             }
@@ -861,7 +861,7 @@ struct EquatableMacroTests {
         case .isolated:
             """
             extension ContentView: Equatable {
-                public static func == (lhs: ContentView, rhs: ContentView) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.id == rhs.id && lhs.hour == rhs.hour && lhs.name == rhs.name && lhs.customType == rhs.customType && lhs.color == rhs.color
                 }
             }
@@ -869,7 +869,7 @@ struct EquatableMacroTests {
         case .main:
             """
             extension ContentView: @MainActor Equatable {
-                public static func == (lhs: ContentView, rhs: ContentView) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.id == rhs.id && lhs.hour == rhs.hour && lhs.name == rhs.name && lhs.customType == rhs.customType && lhs.color == rhs.color
                 }
             }
@@ -886,7 +886,7 @@ struct EquatableMacroTests {
             class ClassType {}
 
             extension ClassType: Equatable {
-                static func == (lhs: ClassType, rhs: ClassType) -> Bool {
+                static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs === rhs
                 }
             }
@@ -926,7 +926,7 @@ struct EquatableMacroTests {
             class ClassType {}
 
             extension ClassType: Equatable {
-                static func == (lhs: ClassType, rhs: ClassType) -> Bool {
+                static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs === rhs
                 }
             }
@@ -994,7 +994,7 @@ struct EquatableMacroTests {
         case .nonisolated:
             """
             extension Person: Equatable {
-                nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
                 }
             }
@@ -1002,7 +1002,7 @@ struct EquatableMacroTests {
         case .isolated:
             """
             extension Person: Equatable {
-                public static func == (lhs: Person, rhs: Person) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
                 }
             }
@@ -1010,7 +1010,7 @@ struct EquatableMacroTests {
         case .main:
             """
             extension Person: @MainActor Equatable {
-                public static func == (lhs: Person, rhs: Person) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
                 }
             }
@@ -1057,7 +1057,7 @@ struct EquatableMacroTests {
         case .nonisolated:
             """
             extension Person: Equatable {
-                nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
                 }
             }
@@ -1065,7 +1065,7 @@ struct EquatableMacroTests {
         case .isolated:
             """
             extension Person: Equatable {
-                public static func == (lhs: Person, rhs: Person) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
                 }
             }
@@ -1073,7 +1073,7 @@ struct EquatableMacroTests {
         case .main:
             """
             extension Person: @MainActor Equatable {
-                public static func == (lhs: Person, rhs: Person) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
                 }
             }
@@ -1120,7 +1120,7 @@ struct EquatableMacroTests {
         case .nonisolated:
             """
             extension User: Equatable {
-                nonisolated public static func == (lhs: User, rhs: User) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.id == rhs.id && lhs.age == rhs.age && lhs.name == rhs.name
                 }
             }
@@ -1136,7 +1136,7 @@ struct EquatableMacroTests {
         case .isolated:
             """
             extension User: Equatable {
-                public static func == (lhs: User, rhs: User) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.id == rhs.id && lhs.age == rhs.age && lhs.name == rhs.name
                 }
             }
@@ -1152,7 +1152,7 @@ struct EquatableMacroTests {
         case .main:
             """
             extension User: @MainActor Equatable {
-                public static func == (lhs: User, rhs: User) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.id == rhs.id && lhs.age == rhs.age && lhs.name == rhs.name
                 }
             }
@@ -1223,7 +1223,7 @@ struct EquatableMacroTests {
                 }
 
                 extension MainActorView: @MainActor Equatable {
-                    public static func == (lhs: MainActorView, rhs: MainActorView) -> Bool {
+                    public static func == (lhs: Self, rhs: Self) -> Bool {
                         lhs.a == rhs.a && lhs.name == rhs.name
                     }
                 }
@@ -1255,7 +1255,7 @@ struct EquatableMacroTests {
             }
 
             extension Person: Equatable {
-                public static func == (lhs: Person, rhs: Person) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.id == rhs.id && lhs.name == rhs.name && lhs.lastName == rhs.lastName && lhs.random == rhs.random
                 }
             }
@@ -1287,7 +1287,7 @@ struct EquatableMacroTests {
             }
 
             extension Person: Equatable {
-                nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.id == rhs.id && lhs.name == rhs.name && lhs.lastName == rhs.lastName && lhs.random == rhs.random
                 }
             }
@@ -1317,7 +1317,7 @@ struct EquatableMacroTests {
             }
 
             extension Person: Equatable {
-                nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third
                 }
             }
@@ -1352,8 +1352,36 @@ struct EquatableMacroTests {
             }
 
             extension Person: Equatable {
-                nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     lhs.id == rhs.id && lhs.name == rhs.name && lhs.lastName == rhs.lastName && lhs.random == rhs.random
+                }
+            }
+            """,
+            macroSpecs: macroSpecs,
+            failureHandler: failureHander
+        )
+    }
+    
+    @Test
+    func conformanceIsGeneratedForTypesWithGeneric() async throws {
+        assertMacroExpansion(
+            """
+            @Equatable
+            struct TestGenericContent<Content: View> {
+                let name: String
+                @EquatableIgnoredUnsafeClosure let closure: (() -> Content)?
+            }
+            """,
+            expandedSource:
+            """
+            struct TestGenericContent<Content: View> {
+                let name: String
+                let closure: (() -> Content)?
+            }
+
+            extension TestGenericContent: Equatable {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
+                    lhs.name == rhs.name
                 }
             }
             """,

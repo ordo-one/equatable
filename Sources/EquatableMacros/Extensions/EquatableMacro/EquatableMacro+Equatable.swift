@@ -16,7 +16,7 @@ extension EquatableMacro {
             case .nonisolated:
                 """
                 extension \(type): Equatable {
-                    nonisolated public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                    nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                         true
                     }
                 }
@@ -24,7 +24,7 @@ extension EquatableMacro {
             case .isolated:
                 """
                 extension \(type): Equatable {
-                    public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                    public static func == (lhs: Self, rhs: Self) -> Bool {
                         true
                     }
                 }
@@ -32,7 +32,7 @@ extension EquatableMacro {
             case .main:
                 """
                 extension \(type): @MainActor Equatable {
-                    public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                    public static func == (lhs: Self, rhs: Self) -> Bool {
                         true
                     }
                 }
@@ -52,7 +52,7 @@ extension EquatableMacro {
         case .nonisolated:
             """
             extension \(type): Equatable {
-                nonisolated public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
                     \(raw: equalityImplementation)
                 }
             }
@@ -60,7 +60,7 @@ extension EquatableMacro {
         case .isolated:
             """
             extension \(type): Equatable {
-                public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     \(raw: equalityImplementation)
                 }
             }
@@ -68,7 +68,7 @@ extension EquatableMacro {
         case .main:
             """
             extension \(type): @MainActor Equatable {
-                public static func == (lhs: \(type), rhs: \(type)) -> Bool {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
                     \(raw: equalityImplementation)
                 }
             }
