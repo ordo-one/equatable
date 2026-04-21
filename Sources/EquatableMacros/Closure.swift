@@ -1,6 +1,10 @@
 import SwiftSyntax
 
 func isClosure(type: TypeSyntax) -> Bool {
+    if let attributedType = type.as(AttributedTypeSyntax.self) {
+        return isClosure(type: attributedType.baseType)
+    }
+
     if type.is(FunctionTypeSyntax.self) {
         return true
     }

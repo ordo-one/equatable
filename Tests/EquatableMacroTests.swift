@@ -484,6 +484,42 @@ struct EquatableMacroTests {
     }
 
     @Test
+    func equatableIgnoredCannotBeAppliedToMainActorClosures() async throws {
+        assertMacroExpansion(
+            """
+            struct CustomView: View {
+                @EquatableIgnored var closure: @MainActor () -> Void
+                var name: String
+
+                var body: some View {
+                    Text("CustomView")
+                }
+            }
+            """,
+            expandedSource:
+            """
+            struct CustomView: View {
+                var closure: @MainActor () -> Void
+                var name: String
+
+                var body: some View {
+                    Text("CustomView")
+                }
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: "@EquatableIgnored cannot be applied to closures",
+                    line: 2,
+                    column: 5
+                )
+            ],
+            macroSpecs: macroSpecs,
+            failureHandler: failureHander
+        )
+    }
+
+    @Test
     func equatableIgnoredCannotBeAppliedToBindings() async throws {
         assertMacroExpansion(
             """
@@ -659,6 +695,75 @@ struct EquatableMacroTests {
     }
 
     @Test(arguments: testArguments)
+    func arbitaryMainActorClosuresNotAllowed(isolation: Isolation) async throws {
+        let macro = EquatableMacroTests.equatableMacro(for: isolation)
+        let generatedConformance = switch isolation {
+        case .nonisolated:
+            """
+            extension CustomView: Equatable {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
+                    lhs.name == rhs.name
+                }
+            }
+            """
+        case .isolated:
+            """
+            extension CustomView: Equatable {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
+                    lhs.name == rhs.name
+                }
+            }
+            """
+        case .main:
+            """
+            extension CustomView: @MainActor Equatable {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
+                    lhs.name == rhs.name
+                }
+            }
+            """
+        }
+        assertMacroExpansion(
+            """
+            \(macro)
+            struct CustomView: View {
+                var name: String
+                let closure: (@MainActor () -> Void)?
+
+                var body: some View {
+                    Text("CustomView")
+                }
+            }
+            """,
+            expandedSource:
+            """
+            struct CustomView: View {
+                var name: String
+                let closure: (@MainActor () -> Void)?
+
+                var body: some View {
+                    Text("CustomView")
+                }
+            }
+
+            \(generatedConformance)
+            """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: "Arbitary closures are not supported in @Equatable",
+                    line: 4,
+                    column: 5,
+                    fixIts: [
+                        FixItSpec(message: "Consider marking the closure with@EquatableIgnoredUnsafeClosure if it doesn't effect the view's body output.")
+                    ]
+                )
+            ],
+            macroSpecs: macroSpecs,
+            failureHandler: failureHander
+        )
+    }
+
+    @Test(arguments: testArguments)
     func closuresMarkedWithEquatableIgnoredUnsafeClosure(isolation: Isolation) async throws {
         let macro = EquatableMacroTests.equatableMacro(for: isolation)
         let generatedConformance = switch isolation {
@@ -703,6 +808,65 @@ struct EquatableMacroTests {
             """
             struct CustomView: View {
                 let closure: (() -> Void)?
+                var name: String
+
+                var body: some View {
+                    Text("CustomView")
+                }
+            }
+
+            \(generatedConformance)
+            """,
+            macroSpecs: macroSpecs,
+            failureHandler: failureHander
+        )
+    }
+
+    @Test(arguments: testArguments)
+    func mainActorClosuresMarkedWithEquatableIgnoredUnsafeClosure(isolation: Isolation) async throws {
+        let macro = EquatableMacroTests.equatableMacro(for: isolation)
+        let generatedConformance = switch isolation {
+        case .nonisolated:
+            """
+            extension CustomView: Equatable {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
+                    lhs.name == rhs.name
+                }
+            }
+            """
+        case .isolated:
+            """
+            extension CustomView: Equatable {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
+                    lhs.name == rhs.name
+                }
+            }
+            """
+        case .main:
+            """
+            extension CustomView: @MainActor Equatable {
+                public static func == (lhs: Self, rhs: Self) -> Bool {
+                    lhs.name == rhs.name
+                }
+            }
+            """
+        }
+        assertMacroExpansion(
+            """
+            \(macro)
+            struct CustomView: View {
+                @EquatableIgnoredUnsafeClosure let closure: (@MainActor () -> Void)?
+                var name: String
+
+                var body: some View {
+                    Text("CustomView")
+                }
+            }
+            """,
+            expandedSource:
+            """
+            struct CustomView: View {
+                let closure: (@MainActor () -> Void)?
                 var name: String
 
                 var body: some View {
