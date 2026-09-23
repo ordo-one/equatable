@@ -32,15 +32,20 @@ jobs:
 
     - name: Export code coverage
       run: |
-         xctest_binary=".build/debug/${{ github.event.repository.name }}PackageTests.xctest"
-         if [ ! -f ${xctest_binary} ]; then
-             xctest_binary=$(find .build/debug/ -type f -name "*.xctest" | tail -1)
-             echo "Will llvm-cov '${xctest_binary}'"
-         fi
-
-         if [ -f ${xctest_binary} ]; then
-             llvm-cov export -format="lcov" ${xctest_binary} -instr-profile .build/debug/codecov/default.profdata > info.lcov
-         fi
+        coverage_json=$(swift test --show-codecov-path)
+        coverage_dir=$(dirname "${coverage_json}")
+        products_dir=$(dirname "${coverage_dir}")
+        test_binary=$(find "${products_dir}" -maxdepth 4 -type f -perm -111 \
+          \( -name "*.xctest" -o -name "*Tests" -o -name "*Tests-test-runner" \) \
+          -print -quit)
+        profdata="${coverage_dir}/default.profdata"
+        if [ -z "${test_binary}" ] || [ ! -f "${profdata}" ]; then
+          echo "Unable to locate the test binary or coverage profile"
+          exit 1
+        fi
+        echo "Will llvm-cov '${test_binary}'"
+        llvm-cov export -format="lcov" "${test_binary}" \
+          -instr-profile "${profdata}" > info.lcov
 
     - name: Upload codecov
       uses: codecov/codecov-action@v5

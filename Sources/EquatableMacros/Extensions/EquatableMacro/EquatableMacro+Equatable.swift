@@ -7,7 +7,7 @@ import SwiftSyntaxMacros
 extension EquatableMacro {
     // swiftlint:disable:next function_body_length
     static func generateEquatableExtensionSyntax(
-        sortedProperties: [(name: String, type: TypeSyntax?)],
+        sortedProperties: [EquatableProperty],
         type: TypeSyntaxProtocol,
         isolation: Isolation
     ) -> ExtensionDeclSyntax? {
@@ -42,11 +42,12 @@ extension EquatableMacro {
             return extensionDecl.as(ExtensionDeclSyntax.self)
         }
 
-        let comparisons = sortedProperties.map { property in
-            "lhs.\(property.name) == rhs.\(property.name)"
-        }.joined(separator: " && ")
+        let comparisons = sortedProperties.map(\.equalityExpression).joined(separator: " && ")
 
-        let equalityImplementation = comparisons.isEmpty ? "true" : comparisons
+        let declarations = sortedProperties.compactMap(\.strategyDeclaration)
+        let equalityImplementation = declarations.isEmpty
+            ? comparisons
+            : (declarations + ["return \(comparisons)"]).joined(separator: "\n")
 
         let extensionDecl: DeclSyntax = switch isolation {
         case .nonisolated:

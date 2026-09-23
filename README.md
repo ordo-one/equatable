@@ -17,7 +17,7 @@ Ideal for teams scaling SwiftUI in large apps.
 
 ## Overview
 
-The `@Equatable` macro generates an `Equatable` implementation that compares all of the struct's stored instance properties, excluding properties with SwiftUI property wrappers like @State and @Environment that trigger view updates through other mechanisms. Properties that aren't `Equatable` and don't affect the output of the view body can be marked with `@EquatableIgnored` to exclude them from the generated implementation. Closures are not permitted by default but can be marked with `@EquatableIgnoredUnsafeClosure` to indicate that they are safe to exclude from equality checks.
+The `@Equatable` macro generates an `Equatable` implementation that compares all of a struct's stored instance properties. Properties with SwiftUI property wrappers like @State and @Environment are excluded because they trigger view updates through other mechanisms. Properties that aren't `Equatable` and don't affect the output of the view body can be marked with `@EquatableIgnored` to exclude them from the generated implementation. Closures are not permitted by default but can be marked with `@EquatableIgnoredUnsafeClosure` to indicate that they are safe to exclude from equality checks.
 
 ## Installation
 
@@ -78,7 +78,100 @@ extension ProfileView: Equatable {
 }
 ```
 
- ## Isolation
+## Property-level comparison strategies
+
+Use `@EquatableCompared` to select how an instance stored property participates in equality.
+It works with stored properties in `@Equatable` structs, including properties with `willSet` or `didSet` observers.
+Other properties retain their normal comparison behavior and ordering.
+
+### Compare a projected value
+
+A key path lets a property participate even when its type does not conform to `Equatable`:
+
+```swift
+final class Document {
+    let identifier: Int
+    let title: String
+
+    init(identifier: Int, title: String) {
+        self.identifier = identifier
+        self.title = title
+    }
+}
+
+@Equatable
+struct DocumentState: Hashable {
+    @EquatableCompared(by: \Document.identifier)
+    var document: Document
+}
+```
+
+Two `DocumentState` values compare equal when their document identifiers match, even if they
+contain different document instances or titles. Hashing also uses the identifier.
+
+Provide a key-path literal with its root type, such as `\Document.identifier`; the marker cannot
+infer the root of `\.identifier` from the property it annotates. Nested paths and optional
+chaining are supported, such as `\Container.document?.identifier`. An optional property needs
+a key path rooted in that optional type, or a strategy that explicitly accepts an optional value.
+
+### Compare reference identity
+
+```swift
+final class Coordinator {}
+
+@Equatable
+struct ScreenState: Hashable {
+    @EquatableCompared(.identity)
+    var coordinator: Coordinator?
+}
+```
+
+Identity uses `===`: two references to the same object compare equal, and distinct objects
+compare unequal even if their contents match. Optional references are supported, with two nil
+values comparing equal. Hashing uses the object's `ObjectIdentifier`, or the nil representation.
+Identity comparison requires a class reference; value types are rejected by the compiler.
+
+### Reuse a normalization strategy
+
+```swift
+enum LowercasedString: EquatableComparisonStrategy {
+    static func comparisonValue(for value: String) -> String {
+        value.lowercased()
+    }
+}
+
+@Equatable
+struct Category: Hashable {
+    @EquatableCompared(using: LowercasedString.self)
+    var name: String
+}
+```
+
+`Category(name: "BOOKS")` equals `Category(name: "books")`, and both use the same normalized
+value for hashing. Strategy types can be generic or namespaced. Pass an explicit metatype,
+such as `LowercasedString.self`, rather than a variable holding a metatype.
+
+A strategy implements `EquatableComparisonStrategy`, whose `Value` is the property input and
+whose `ComparisonValue: Equatable` is the comparison representation. Swift can infer both
+associated types from `comparisonValue(for:)`. A strategy can accept optional inputs and
+normalize nil explicitly.
+
+### Requirements and semantics
+
+- Projected values only need `Equatable` for equality. If the containing type uses generated
+  hashing, the projected value must also conform to `Hashable`; the compiler enforces this.
+- Projections must be deterministic and free of side effects. They run when a comparison or
+  hash is requested and obey the selected isolation mode. Equality still short-circuits.
+- Projections read current values; they do not snapshot mutable object state. Identity does
+  not detect mutations within an existing object. Comparison keys must remain stable while
+  a value is stored in a `Set` or used as a dictionary key.
+- Each property can have one comparison marker. Combining it with `@EquatableIgnored`,
+  `@EquatableIgnoredUnsafeClosure`, or an automatically skipped SwiftUI wrapper produces an error.
+- Comparison markers require an enclosing `@Equatable` struct.
+  Computed properties, static/class properties, closures, and multi-property declarations
+  are unsupported. Write a separate declaration for each annotated property.
+
+## Isolation
 `Equatable` macro supports generating the conformance with different isolation levels by using the `isolation` parameter.
 The parameter accepts three values: `.nonisolated` (default), `.isolated`, and `.main` (requires Swift 6.2 or later).
 The chosen isolation level will be applied to the generated conformances for both `Equatable` and `Hashable` (if applicable).
