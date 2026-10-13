@@ -112,6 +112,8 @@ struct ProfileView: View {
 }
 ```
 
+Compilers before Swift 6.3 crash when a member attribute macro attaches another macro and the outer attribute has arguments ([swiftlang/swift#69780](https://github.com/swiftlang/swift/issues/69780)). On those compilers the check is therefore not attached for `@Equatable(isolation: ...)`; a non-`Equatable` property is still reported, but inside the generated `==` as before.
+
 This technique is described in Point-Free's [Advanced macro technique: static type information](https://www.pointfree.co/blog/posts/232-advanced-macro-technique-1-static-type-information).
 
 ## Property-level comparison strategies
