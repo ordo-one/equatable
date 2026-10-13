@@ -8,7 +8,16 @@ import SwiftSyntaxMacros
 ///
 /// This macro creates a standard equality implementation by comparing all stored properties
 /// that aren't explicitly marked to be skipped with `@EquatableIgnored`.
-/// Properties with SwiftUI property wrappers (like `@State`, `@ObservedObject`, etc.)
+/// Properties with SwiftUI property wrappers (like `@State`, `@ObservedObject`, etc.) are skipped automatically.
+///
+/// Class-typed properties don't have to be `Equatable`: they are compared by identity (`===`) unless the class
+/// conforms to `Equatable`, in which case its own `==` is used. The generated `==` calls the overloaded `_$isEqual`
+/// helpers, which is how overload resolution picks the right comparison for each property.
+///
+/// A property whose type is neither `Equatable` nor a class is reported with an error on the property itself.
+/// To achieve that, the macro attaches `@_EquatableCheck` to every compared property; the attribute has no effect
+/// on the generated code. Properties with an explicit `@EquatableCompared` marker are not checked: their projected
+/// value is type-checked inside the generated `==` instead.
 ///
 /// Structs with arbitrary closures are not supported unless they are marked explicitly with `@EquatableIgnoredUnsafeClosure` -
 /// meaning that they are safe because they don't  influence rendering of the view's body.
@@ -43,7 +52,7 @@ import SwiftSyntaxMacros
 /// ```swift
 /// extension ProfileView: Equatable {
 ///     nonisolated public static func == (lhs: ProfileView, rhs: ProfileView) -> Bool {
-///         lhs.id == rhs.id && lhs.username == rhs.username
+///         _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.username, rhs.username)
 ///     }
 /// }
 /// ```
@@ -64,12 +73,12 @@ import SwiftSyntaxMacros
 /// ```swift
 /// extension User: Equatable {
 ///     nonisolated public static func == (lhs: User, rhs: User) -> Bool {
-///         lhs.id == rhs.id
+///         _$isEqual(lhs.id, rhs.id)
 ///     }
 /// }
 /// extension User {
 ///     nonisolated public func hash(into hasher: inout Hasher) {
-///         hasher.combine(id)
+///         _$hash(id, into: &hasher)
 ///     }
 /// }
 /// ```
@@ -94,7 +103,7 @@ import SwiftSyntaxMacros
 ///  ```swift
 ///  extension Person: Equatable {
 ///   nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
-///     lhs.name == rhs.name && lhs.age == rhs.age
+///     _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.age, rhs.age)
 ///    }
 ///  }
 ///  ```
@@ -113,7 +122,7 @@ import SwiftSyntaxMacros
 ///  ```swift
 ///  extension Person: Equatable {
 ///   public static func == (lhs: Person, rhs: Person) -> Bool {
-///     lhs.name == rhs.name && lhs.age == rhs.age
+///     _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.age, rhs.age)
 ///    }
 ///  }
 ///  ```
@@ -139,12 +148,12 @@ import SwiftSyntaxMacros
 ///  ```swift
 ///  extension Person: Equatable {
 ///     public static func == (lhs: Person, rhs: Person) -> Bool {
-///         lhs.name == rhs.name && lhs.age == rhs.age
+///         _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.age, rhs.age)
 ///     }
 ///  }
 ///  ```
 ///
-public struct EquatableMacro: ExtensionMacro {
+public struct EquatableMacro: ExtensionMacro, MemberAttributeMacro {
     static let skippablePropertyWrappers: Set = [
         "AccessibilityFocusState",
         "AppStorage",
@@ -170,13 +179,21 @@ public struct EquatableMacro: ExtensionMacro {
         "WKExtensionDelegateAdaptor"
     ]
 
-    private enum PropertyExtraction {
+    enum PropertyExtraction {
+        /// A property that takes part in the generated conformance.
         case property(EquatableProperty)
+        /// Not a stored instance property, or explicitly excluded (property wrappers, `@EquatableIgnored`, ...).
         case skip
+        /// A closure property that isn't marked with `@EquatableIgnoredUnsafeClosure`.
+        case closure
+        /// An `@EquatableCompared` marker that the peer macro rejects.
         case invalidComparison
     }
 
-    private static func extractProperty(
+    /// Decides how a member of the annotated struct takes part in the generated conformance.
+    /// Shared between the extension role (which generates `==`) and the member attribute role
+    /// (which attaches `@_EquatableCheck`) so that both always agree on the set of properties.
+    static func extractProperty(
         from declaration: VariableDeclSyntax,
         in context: some MacroExpansionContext
     ) -> PropertyExtraction {
@@ -204,13 +221,13 @@ public struct EquatableMacro: ExtensionMacro {
         let isClosureProperty = (binding.typeAnnotation?.type).map(isClosure) == true
             || (binding.initializer?.value.is(ClosureExprSyntax.self) ?? false)
         if isClosureProperty {
-            context.diagnose(makeClosureDiagnostic(for: declaration))
-            return .skip
+            return .closure
         }
 
         return .property(EquatableProperty(
             name: identifier.trimmedDescription,
             type: binding.typeAnnotation?.type,
+            initializer: binding.initializer?.value,
             comparison: comparison,
             in: context
         ))
@@ -230,6 +247,8 @@ public struct EquatableMacro: ExtensionMacro {
                 properties.append(property)
             case .skip:
                 continue
+            case .closure:
+                context.diagnose(makeClosureDiagnostic(for: variable))
             case .invalidComparison:
                 // The peer macro diagnoses at the marker. Avoid generating a
                 // partial conformance if any explicit comparison is invalid.
@@ -298,5 +317,30 @@ public struct EquatableMacro: ExtensionMacro {
             type: type,
             isolation: isolation
         )
+    }
+
+    /// Attaches `@_EquatableCheck` to every stored property that takes part in the generated `==`.
+    ///
+    /// The macro itself can't tell whether a property's type is `Equatable`. The attached peer macro
+    /// is overloaded on its argument type, so the compiler picks a pass or fail expansion for us and
+    /// a non-`Equatable` property is reported on the property itself. See `EquatableCheckFailMacro`.
+    public static func expansion(
+        of _: AttributeSyntax,
+        attachedTo declaration: some DeclGroupSyntax,
+        providingAttributesFor member: some DeclSyntaxProtocol,
+        in context: some MacroExpansionContext
+    ) throws -> [AttributeSyntax] {
+        guard declaration.is(StructDeclSyntax.self),
+              let variable = member.as(VariableDeclSyntax.self),
+              // An `@EquatableCompared` property is compared through its projection, which the
+              // generated `==` type-checks; checking the property's own type would be wrong.
+              // Checked before building the model so that no unique name is consumed here.
+              EquatableComparedMacro.attributes(in: variable).isEmpty,
+              case let .property(property) = Self.extractProperty(from: variable, in: context),
+              let attribute = Self.makeCheckAttribute(for: property)
+        else {
+            return []
+        }
+        return [attribute]
     }
 }
