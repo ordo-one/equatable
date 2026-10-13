@@ -37,7 +37,7 @@ extension EquatableMacro {
         }
 
         let hashableImplementation = sortedProperties.map { property in
-            "hasher.combine(\(property.name))"
+            "_$hash(\(property.name), into: &hasher)"
         }
         .joined(separator: "\n")
 

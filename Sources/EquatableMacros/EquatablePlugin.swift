@@ -6,6 +6,8 @@ struct EquatablePlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         EquatableMacro.self,
         EquatableIgnoredMacro.self,
-        EquatableIgnoredUnsafeClosureMacro.self
+        EquatableIgnoredUnsafeClosureMacro.self,
+        EquatableCheckPassMacro.self,
+        EquatableCheckFailMacro.self
     ]
 }
