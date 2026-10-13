@@ -33,6 +33,21 @@ func failureHander(_ failure: TestFailureSpec) {
     Issue.record(failure)
 }
 
+extension String {
+    /// Compilers before 6.3 don't get `@_EquatableCheck` when `@Equatable` has arguments,
+    /// see `EquatableMacro.canAttachCheck(from:)`. The plugin under test is built by the same compiler.
+    func expectedExpansion(macroHasArguments: Bool) -> String {
+        #if compiler(>=6.3)
+            return self
+        #else
+            guard macroHasArguments else { return self }
+            return split(separator: "\n", omittingEmptySubsequences: false)
+                .filter { !$0.contains("@_EquatableCheck(") }
+                .joined(separator: "\n")
+        #endif
+    }
+}
+
 @Suite
 struct EquatableMacroTests {
     enum Isolation {
@@ -118,7 +133,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -183,7 +198,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -287,7 +302,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -391,7 +406,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -457,7 +472,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -683,7 +698,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             diagnostics: [
                 DiagnosticSpec(
                     message: "Arbitary closures are not supported in @Equatable",
@@ -765,7 +780,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             diagnostics: [
                 DiagnosticSpec(
                     message: "Arbitary closures are not supported in @Equatable",
@@ -835,7 +850,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -895,7 +910,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -952,7 +967,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1024,7 +1039,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformances)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1143,7 +1158,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1238,7 +1253,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1306,7 +1321,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1392,7 +1407,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformances)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1431,7 +1446,7 @@ struct EquatableMacroTests {
                         _$isEqual(lhs.a, rhs.a) && _$isEqual(lhs.name, rhs.name)
                     }
                 }
-                """,
+                """.expectedExpansion(macroHasArguments: true),
                 macroSpecs: macroSpecs,
                 failureHandler: failureHander
             )
@@ -1467,7 +1482,7 @@ struct EquatableMacroTests {
                     _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.lastName, rhs.lastName) && _$isEqual(lhs.random, rhs.random)
                 }
             }
-            """,
+            """.expectedExpansion(macroHasArguments: true),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1503,7 +1518,7 @@ struct EquatableMacroTests {
                     _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.lastName, rhs.lastName) && _$isEqual(lhs.random, rhs.random)
                 }
             }
-            """,
+            """.expectedExpansion(macroHasArguments: true),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1536,7 +1551,7 @@ struct EquatableMacroTests {
                     _$isEqual(lhs.first, rhs.first) && _$isEqual(lhs.second, rhs.second) && _$isEqual(lhs.third, rhs.third)
                 }
             }
-            """,
+            """.expectedExpansion(macroHasArguments: true),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1575,7 +1590,7 @@ struct EquatableMacroTests {
                     _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.lastName, rhs.lastName) && _$isEqual(lhs.random, rhs.random)
                 }
             }
-            """,
+            """.expectedExpansion(macroHasArguments: true),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )

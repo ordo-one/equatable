@@ -245,17 +245,34 @@ public struct EquatableMacro: ExtensionMacro, MemberAttributeMacro {
     /// is overloaded on its argument type, so the compiler picks a pass or fail expansion for us and
     /// a non-`Equatable` property is reported on the property itself. See `EquatableCheckFailMacro`.
     public static func expansion(
-        of _: AttributeSyntax,
+        of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
         providingAttributesFor member: some DeclSyntaxProtocol,
         in _: some MacroExpansionContext
     ) throws -> [AttributeSyntax] {
         guard declaration.is(StructDeclSyntax.self),
+              Self.canAttachCheck(from: node),
               case let .stored(property) = Self.classify(member),
               let attribute = Self.makeCheckAttribute(for: property)
         else {
             return []
         }
         return [attribute]
+    }
+
+    /// Whether `@_EquatableCheck` can be attached from this `@Equatable` attribute.
+    ///
+    /// Swift 6.2 crashes while expanding a macro that a member attribute macro attached, if the
+    /// attribute of the outer macro has arguments: it re-resolves `@Equatable(isolation: ...)` in the
+    /// wrong declaration context (swiftlang/swift#69780, fixed on the 6.3 branch by "Use CustomAttr's
+    /// DeclContext for ResolveMacroRequest"). The plugin is built by the same toolchain that compiles
+    /// the client code, so the compiler version here is the one that would crash. On those compilers
+    /// a non-`Equatable` property is still reported, just inside the generated `==`.
+    static func canAttachCheck(from node: AttributeSyntax) -> Bool {
+        #if compiler(>=6.3)
+            return true
+        #else
+            return node.leftParen == nil
+        #endif
     }
 }
