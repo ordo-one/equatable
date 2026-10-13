@@ -8,7 +8,15 @@ import SwiftSyntaxMacros
 ///
 /// This macro creates a standard equality implementation by comparing all stored properties
 /// that aren't explicitly marked to be skipped with `@EquatableIgnored.
-/// Properties with SwiftUI property wrappers (like `@State`, `@ObservedObject`, etc.)
+/// Properties with SwiftUI property wrappers (like `@State`, `@ObservedObject`, etc.) are skipped automatically.
+///
+/// Class-typed properties don't have to be `Equatable`: they are compared by identity (`===`) unless the class
+/// conforms to `Equatable`, in which case its own `==` is used. The generated `==` calls the overloaded `_$isEqual`
+/// helpers, which is how overload resolution picks the right comparison for each property.
+///
+/// A property whose type is neither `Equatable` nor a class is reported with an error on the property itself.
+/// To achieve that, the macro attaches `@_EquatableCheck` to every compared property; the attribute has no effect
+/// on the generated code.
 ///
 /// Structs with arbitary closures are not supported unless they are marked explicitly with `@EquatableIgnoredUnsafeClosure` -
 /// meaning that they are safe because they don't  influence rendering of the view's body.
@@ -43,7 +51,7 @@ import SwiftSyntaxMacros
 /// ```swift
 /// extension ProfileView: Equatable {
 ///     nonisolated public static func == (lhs: ProfileView, rhs: ProfileView) -> Bool {
-///         lhs.id == rhs.id && lhs.username == rhs.username
+///         _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.username, rhs.username)
 ///     }
 /// }
 /// ```
@@ -64,12 +72,12 @@ import SwiftSyntaxMacros
 /// ```swift
 /// extension User: Equatable {
 ///     nonisolated public static func == (lhs: User, rhs: User) -> Bool {
-///         lhs.id == rhs.id
+///         _$isEqual(lhs.id, rhs.id)
 ///     }
 /// }
 /// extension User {
 ///     nonisolated public func hash(into hasher: inout Hasher) {
-///         hasher.combine(id)
+///         _$hash(id, into: &hasher)
 ///     }
 /// }
 /// ```
@@ -94,7 +102,7 @@ import SwiftSyntaxMacros
 ///  ```swift
 ///  extension Person: Equatable {
 ///   nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
-///     lhs.name == rhs.name && lhs.age == rhs.age
+///     _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.age, rhs.age)
 ///    }
 ///  }
 ///  ```
@@ -113,7 +121,7 @@ import SwiftSyntaxMacros
 ///  ```swift
 ///  extension Person: Equatable {
 ///   public static func == (lhs: Person, rhs: Person) -> Bool {
-///     lhs.name == rhs.name && lhs.age == rhs.age
+///     _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.age, rhs.age)
 ///    }
 ///  }
 ///  ```
@@ -139,12 +147,12 @@ import SwiftSyntaxMacros
 ///  ```swift
 ///  extension Person: Equatable {
 ///     public static func == (lhs: Person, rhs: Person) -> Bool {
-///         lhs.name == rhs.name && lhs.age == rhs.age
+///         _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.age, rhs.age)
 ///     }
 ///  }
 ///  ```
 ///
-public struct EquatableMacro: ExtensionMacro {
+public struct EquatableMacro: ExtensionMacro, MemberAttributeMacro {
     static let skippablePropertyWrappers: Set = [
         "AccessibilityFocusState",
         "AppStorage",
@@ -170,7 +178,6 @@ public struct EquatableMacro: ExtensionMacro {
         "WKExtensionDelegateAdaptor"
     ]
 
-    // swiftlint:disable:next function_body_length
     public static func expansion(
         of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
@@ -193,33 +200,15 @@ public struct EquatableMacro: ExtensionMacro {
         // Extract stored properties
         var storedProperties: [(name: String, type: TypeSyntax?)] = []
         for member in structDecl.memberBlock.members {
-            guard let varDecl = member.decl.as(VariableDeclSyntax.self),
-                  let binding = varDecl.bindings.first,
-                  let identifier = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text,
-                  binding.accessorBlock == nil,
-                  !varDecl.isStatic else {
+            switch Self.classify(member.decl) {
+            case .notCompared:
                 continue
-            }
-
-            if Self.shouldSkip(varDecl) {
-                continue
-            }
-
-            if isMarkedWithEquatableIgnoredUnsafeClosure(varDecl) {
-                continue
-            }
-
-            // Check if it's a closure that should trigger diagnostic
-            let isClosureProperty = (binding.typeAnnotation?.type).map(isClosure) == true ||
-                (binding.initializer?.value.is(ClosureExprSyntax.self) ?? false)
-
-            if isClosureProperty {
+            case let .closure(varDecl):
                 let diagnostic = Self.makeClosureDiagnostic(for: varDecl)
                 context.diagnose(diagnostic)
-                continue
+            case let .stored(property):
+                storedProperties.append((name: property.name, type: property.type))
             }
-
-            storedProperties.append((name: identifier, type: binding.typeAnnotation?.type))
         }
 
         // Sort properties: "id" first, then by type complexity
@@ -248,5 +237,25 @@ public struct EquatableMacro: ExtensionMacro {
         } else {
             return [extensionSyntax]
         }
+    }
+
+    /// Attaches `@_EquatableCheck` to every stored property that takes part in the generated `==`.
+    ///
+    /// The macro itself can't tell whether a property's type is `Equatable`. The attached peer macro
+    /// is overloaded on its argument type, so the compiler picks a pass or fail expansion for us and
+    /// a non-`Equatable` property is reported on the property itself. See `EquatableCheckFailMacro`.
+    public static func expansion(
+        of _: AttributeSyntax,
+        attachedTo declaration: some DeclGroupSyntax,
+        providingAttributesFor member: some DeclSyntaxProtocol,
+        in _: some MacroExpansionContext
+    ) throws -> [AttributeSyntax] {
+        guard declaration.is(StructDeclSyntax.self),
+              case let .stored(property) = Self.classify(member),
+              let attribute = Self.makeCheckAttribute(for: property)
+        else {
+            return []
+        }
+        return [attribute]
     }
 }

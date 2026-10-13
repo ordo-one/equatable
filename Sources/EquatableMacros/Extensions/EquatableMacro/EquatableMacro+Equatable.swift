@@ -43,7 +43,7 @@ extension EquatableMacro {
         }
 
         let comparisons = sortedProperties.map { property in
-            "lhs.\(property.name) == rhs.\(property.name)"
+            "_$isEqual(lhs.\(property.name), rhs.\(property.name))"
         }.joined(separator: " && ")
 
         let equalityImplementation = comparisons.isEmpty ? "true" : comparisons

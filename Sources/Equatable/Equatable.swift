@@ -2,7 +2,15 @@
 ///
 /// This macro creates a standard equality implementation by comparing all stored properties
 /// that aren't explicitly marked to be skipped with `@EquatableIgnored.
-/// Properties with SwiftUI property wrappers (like `@State`, `@ObservedObject`, etc.)
+/// Properties with SwiftUI property wrappers (like `@State`, `@ObservedObject`, etc.) are skipped automatically.
+///
+/// Class-typed properties don't have to be `Equatable`: they are compared by identity (`===`) unless the class
+/// conforms to `Equatable`, in which case its own `==` is used. The generated `==` calls the overloaded `_$isEqual`
+/// helpers, which is how overload resolution picks the right comparison for each property.
+///
+/// A property whose type is neither `Equatable` nor a class is reported with an error on the property itself.
+/// To achieve that, the macro attaches `@_EquatableCheck` to every compared property; the attribute has no effect
+/// on the generated code.
 ///
 /// Structs with arbitary closures are not supported unless they are marked explicitly with `@EquatableIgnoredUnsafeClosure` -
 /// meaning that they are safe because they don't  influence rendering of the view's body.
@@ -37,7 +45,7 @@
 /// ```swift
 /// extension ProfileView: Equatable {
 ///     nonisolated public static func == (lhs: ProfileView, rhs: ProfileView) -> Bool {
-///         lhs.id == rhs.id && lhs.username == rhs.username
+///         _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.username, rhs.username)
 ///     }
 /// }
 /// ```
@@ -58,12 +66,12 @@
 /// ```swift
 /// extension User: Equatable {
 ///     nonisolated public static func == (lhs: User, rhs: User) -> Bool {
-///         lhs.id == rhs.id
+///         _$isEqual(lhs.id, rhs.id)
 ///     }
 /// }
 /// extension User {
 ///     nonisolated public func hash(into hasher: inout Hasher) {
-///         hasher.combine(id)
+///         _$hash(id, into: &hasher)
 ///     }
 /// }
 /// ```
@@ -88,7 +96,7 @@
 ///  ```swift
 ///  extension Person: Equatable {
 ///   nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
-///     lhs.name == rhs.name && lhs.age == rhs.age
+///     _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.age, rhs.age)
 ///    }
 ///  }
 ///  ```
@@ -107,7 +115,7 @@
 ///  ```swift
 ///  extension Person: Equatable {
 ///   public static func == (lhs: Person, rhs: Person) -> Bool {
-///     lhs.name == rhs.name && lhs.age == rhs.age
+///     _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.age, rhs.age)
 ///    }
 ///  }
 ///  ```
@@ -133,12 +141,13 @@
 ///  ```swift
 ///  extension Person: Equatable {
 ///     public static func == (lhs: Person, rhs: Person) -> Bool {
-///         lhs.name == rhs.name && lhs.age == rhs.age
+///         _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.age, rhs.age)
 ///     }
 ///  }
 ///  ```
 ///
 @attached(extension, conformances: Equatable, Hashable, names: named(==), named(hash(into:)))
+@attached(memberAttribute)
 public macro Equatable(isolation: Isolation = .nonisolated) = #externalMacro(module: "EquatableMacros", type: "EquatableMacro")
 
 /// Isolation level for the generated Equatable functions.
@@ -256,3 +265,69 @@ public macro EquatableIgnored() = #externalMacro(module: "EquatableMacros", type
 /// - The decorated property must be a closure type
 @attached(peer)
 public macro EquatableIgnoredUnsafeClosure() = #externalMacro(module: "EquatableMacros", type: "EquatableIgnoredUnsafeClosureMacro")
+
+// The `_EquatableCheck` peer macro is an implementation detail of `@Equatable`.
+//
+// `@Equatable` cannot know whether a property's type conforms to `Equatable`, because macros only
+// see syntax. Instead, it attaches `@_EquatableCheck` to every compared stored property, passing the
+// property's type (or initializer value when the type is inferred) as the macro argument. Macro
+// arguments are type-checked, so the compiler selects one of the overloads below:
+//
+// - `Equatable` types and classes resolve to `EquatableCheckPassMacro`, which expands to nothing.
+// - anything else resolves to `EquatableCheckFailMacro`, which emits an error on the property itself
+//   instead of somewhere inside the generated `==`.
+//
+// Classes that don't conform to `Equatable` are accepted because the generated `==` compares them by
+// identity (see `_$isEqual`).
+
+// MARK: - Properties with an explicit type annotation
+
+@attached(peer)
+public macro _EquatableCheck<T: Equatable>(type: T.Type) =
+    #externalMacro(module: "EquatableMacros", type: "EquatableCheckPassMacro")
+
+@attached(peer)
+public macro _EquatableCheck<T: AnyObject>(type: T.Type) =
+    #externalMacro(module: "EquatableMacros", type: "EquatableCheckPassMacro")
+
+@attached(peer)
+public macro _EquatableCheck<T: Equatable & AnyObject>(type: T.Type) =
+    #externalMacro(module: "EquatableMacros", type: "EquatableCheckPassMacro")
+
+@attached(peer)
+public macro _EquatableCheck<T: AnyObject>(type: T?.Type) =
+    #externalMacro(module: "EquatableMacros", type: "EquatableCheckPassMacro")
+
+@attached(peer)
+public macro _EquatableCheck<T: Equatable & AnyObject>(type: T?.Type) =
+    #externalMacro(module: "EquatableMacros", type: "EquatableCheckPassMacro")
+
+@attached(peer)
+public macro _EquatableCheck<T>(type: T.Type) =
+    #externalMacro(module: "EquatableMacros", type: "EquatableCheckFailMacro")
+
+// MARK: - Properties whose type is inferred from the initializer
+
+@attached(peer)
+public macro _EquatableCheck<T: Equatable>(value: T) =
+    #externalMacro(module: "EquatableMacros", type: "EquatableCheckPassMacro")
+
+@attached(peer)
+public macro _EquatableCheck<T: AnyObject>(value: T) =
+    #externalMacro(module: "EquatableMacros", type: "EquatableCheckPassMacro")
+
+@attached(peer)
+public macro _EquatableCheck<T: Equatable & AnyObject>(value: T) =
+    #externalMacro(module: "EquatableMacros", type: "EquatableCheckPassMacro")
+
+@attached(peer)
+public macro _EquatableCheck<T: AnyObject>(value: T?) =
+    #externalMacro(module: "EquatableMacros", type: "EquatableCheckPassMacro")
+
+@attached(peer)
+public macro _EquatableCheck<T: Equatable & AnyObject>(value: T?) =
+    #externalMacro(module: "EquatableMacros", type: "EquatableCheckPassMacro")
+
+@attached(peer)
+public macro _EquatableCheck<T>(value: T) =
+    #externalMacro(module: "EquatableMacros", type: "EquatableCheckFailMacro")

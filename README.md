@@ -17,7 +17,7 @@ Ideal for teams scaling SwiftUI in large apps.
 
 ## Overview
 
-The `@Equatable` macro generates an `Equatable` implementation that compares all of the struct's stored instance properties, excluding properties with SwiftUI property wrappers like @State and @Environment that trigger view updates through other mechanisms. Properties that aren't `Equatable` and don't affect the output of the view body can be marked with `@EquatableIgnored` to exclude them from the generated implementation. Closures are not permitted by default but can be marked with `@EquatableIgnoredUnsafeClosure` to indicate that they are safe to exclude from equality checks.
+The `@Equatable` macro generates an `Equatable` implementation that compares all of the struct's stored instance properties, excluding properties with SwiftUI property wrappers like @State and @Environment that trigger view updates through other mechanisms. Class-typed properties are compared by identity unless the class is itself `Equatable`. Properties that aren't `Equatable` and don't affect the output of the view body can be marked with `@EquatableIgnored` to exclude them from the generated implementation; the macro reports such properties with an error on the property itself. Closures are not permitted by default but can be marked with `@EquatableIgnoredUnsafeClosure` to indicate that they are safe to exclude from equality checks.
 
 ## Installation
 
@@ -73,10 +73,46 @@ The generated extension will implement the `==` operator with property compariso
 ```swift
 extension ProfileView: Equatable {
     nonisolated public static func == (lhs: ProfileView, rhs: ProfileView) -> Bool {
-        lhs.id == rhs.id && lhs.username == rhs.username
+        _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.username, rhs.username)
     }
 }
 ```
+
+`_$isEqual` is a set of overloaded helper functions from the `Equatable` module. Overload resolution picks `==` for `Equatable` types and `===` for classes, so the generated code never has to know which one a property is. The macro also attaches a `@_EquatableCheck` attribute to every compared property; it has no effect on the generated code and only exists to report non-`Equatable` properties, see [Diagnostics](#diagnostics).
+
+## Class properties
+
+Properties whose type is a class don't have to conform to `Equatable`: they are compared by identity (`===`) and hashed by `ObjectIdentifier`. A class that does conform to `Equatable` keeps its own `==`. This also applies to optional class properties.
+
+```swift
+final class ImageLoader {}
+
+@Equatable
+struct AvatarView: View {
+    let loader: ImageLoader // compared with ===
+    let url: URL            // compared with ==
+
+    var body: some View {
+        Text(url.absoluteString)
+    }
+}
+```
+
+## Diagnostics
+
+Macros only see the syntax of the struct, so `@Equatable` can't tell whether a property's type conforms to `Equatable`. To still report the problem on the right line, the macro attaches `@_EquatableCheck(type: ...)` (or `@_EquatableCheck(value: ...)` for properties whose type is inferred from the initializer) to every compared property. The compiler type-checks the argument and resolves it to a pass or fail expansion of that macro. A property that is neither `Equatable` nor a class is reported on the property, with a fix-it that marks it with `@EquatableIgnored`:
+
+```swift
+struct Theme {}
+
+@Equatable
+struct ProfileView: View {
+    let theme: Theme // error: Property 'theme' of type 'Theme' does not conform to 'Equatable'
+    ...
+}
+```
+
+This technique is described in Point-Free's [Advanced macro technique: static type information](https://www.pointfree.co/blog/posts/232-advanced-macro-technique-1-static-type-information).
 
  ## Isolation
 `Equatable` macro supports generating the conformance with different isolation levels by using the `isolation` parameter.
@@ -97,7 +133,7 @@ expands to:
 ```swift
 extension Person: Equatable {
   nonisolated public static func == (lhs: Person, rhs: Person) -> Bool {
-    lhs.name == rhs.name && lhs.age == rhs.age
+    _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.age, rhs.age)
   }
 }
 ```
@@ -116,7 +152,7 @@ expands to:
 ```swift
 extension Person: Equatable {
   public static func == (lhs: Person, rhs: Person) -> Bool {
-    lhs.name == rhs.name && lhs.age == rhs.age
+    _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.age, rhs.age)
   }
 }
 ```
@@ -142,7 +178,7 @@ expands to:
 ```swift
 extension Person: @MainActor Equatable {
     public static func == (lhs: Person, rhs: Person) -> Bool {
-        lhs.name == rhs.name && lhs.age == rhs.age
+        _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.age, rhs.age)
     }
 }
 ```
@@ -210,7 +246,7 @@ it will not cause a re-render when the value of `enabled` changes. The closure w
 
 ## Hashable conformance
 
-If the type is marked as conforming to `Hashable` the compiler synthesized `Hashable` implementation will not be correct. That's why the `@Equatable` macro will also generate a `Hashable` implementation for the type that is aligned with the `Equatable` implementation.
+If the type is marked as conforming to `Hashable` the compiler synthesized `Hashable` implementation will not be correct. That's why the `@Equatable` macro will also generate a `Hashable` implementation for the type that is aligned with the `Equatable` implementation. Class properties that aren't `Hashable` are hashed by identity; an `Equatable` class that isn't `Hashable` doesn't contribute to the hash, which keeps `hash(into:)` consistent with its `==`.
 
 ```swift
 import Equatable
@@ -226,12 +262,12 @@ Expanded:
 ```swift
 extension User: Equatable {
     nonisolated public static func == (lhs: User, rhs: User) -> Bool {
-        lhs.id == rhs.id
+        _$isEqual(lhs.id, rhs.id)
     }
 }
 extension User {
     nonisolated public func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
+        _$hash(id, into: &hasher)
     }
 }
 ```
