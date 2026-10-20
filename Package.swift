@@ -38,6 +38,7 @@ let package = Package(
         .testTarget(
             name: "EquatableTests",
             dependencies: [
+                "Equatable",
                 "EquatableMacros",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax")
             ]

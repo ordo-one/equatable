@@ -23,6 +23,33 @@ import Equatable
         @EquatableIgnoredUnsafeClosure let closure: (() -> Content)?
     }
 
+    @Equatable
+    struct EquatableComparedExample: Hashable {
+        let name: String
+        @EquatableCompared(.identity)
+        let foo1: Foo
+        @EquatableCompared(by: \Foo.id)
+        let foo2: Foo
+        @EquatableCompared(using: FooComparedByUUIDString.self)
+        let foo3: Foo
+
+        @EquatableIgnoredUnsafeClosure let closure: (() -> Void)?
+    }
+
+    class Foo {
+        let id: UUID
+
+        init() {
+            id = UUID()
+        }
+    }
+
+    enum FooComparedByUUIDString: EquatableComparisonStrategy {
+        static func comparisonValue(for value: Foo) -> some Hashable {
+            value.id.uuidString
+        }
+    }
+
     struct CustomType: Equatable {
         let name: String
         let lastName: String

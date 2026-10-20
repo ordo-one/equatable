@@ -7,7 +7,7 @@ import SwiftSyntaxMacros
 extension EquatableMacro {
     // swiftlint:disable:next function_body_length
     static func generateHashableExtensionSyntax(
-        sortedProperties: [(name: String, type: TypeSyntax?)],
+        sortedProperties: [EquatableProperty],
         type: TypeSyntaxProtocol,
         isolation: Isolation
     ) -> ExtensionDeclSyntax? {
@@ -36,10 +36,8 @@ extension EquatableMacro {
             return hashableExtensionDecl.as(ExtensionDeclSyntax.self)
         }
 
-        let hashableImplementation = sortedProperties.map { property in
-            "hasher.combine(\(property.name))"
-        }
-        .joined(separator: "\n")
+        let declarations = sortedProperties.compactMap(\.strategyDeclaration)
+        let hashableImplementation = (declarations + sortedProperties.map(\.hashExpression)).joined(separator: "\n")
 
         let hashableExtensionDecl: DeclSyntax = switch isolation {
         case .nonisolated:

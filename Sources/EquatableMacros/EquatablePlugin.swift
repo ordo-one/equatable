@@ -5,6 +5,7 @@ import SwiftSyntaxMacros
 struct EquatablePlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         EquatableMacro.self,
+        EquatableComparedMacro.self,
         EquatableIgnoredMacro.self,
         EquatableIgnoredUnsafeClosureMacro.self
     ]
