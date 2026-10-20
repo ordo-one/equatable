@@ -161,4 +161,41 @@ struct EquatableComparisonMacroTests {
             failureHandler: failureHander
         )
     }
+
+    @Test
+    func unannotatedPropertiesUseTheHelpersAndTheCheckSkipsAnnotatedOnes() {
+        assertMacroExpansion(
+            #"""
+            @Equatable
+            struct Model: Hashable {
+                let id: String
+                @EquatableCompared(by: \Document.identifier)
+                var document: Document
+            }
+            """#,
+            expandedSource: #"""
+            struct Model: Hashable {
+                @_EquatableCheck(type: String.self)
+                let id: String
+                @EquatableCompared(by: \Document.identifier)
+                var document: Document
+            }
+
+            extension Model: Equatable {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
+                    _$isEqual(lhs.id, rhs.id) && lhs.document[keyPath: \Document.identifier] == rhs.document[keyPath: \Document.identifier]
+                }
+            }
+
+            extension Model {
+                nonisolated public func hash(into hasher: inout Hasher) {
+                    _$hash(id, into: &hasher)
+                    hasher.combine(self.document[keyPath: \Document.identifier])
+                }
+            }
+            """#,
+            macroSpecs: macroSpecs,
+            failureHandler: failureHander
+        )
+    }
 }
