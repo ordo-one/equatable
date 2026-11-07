@@ -7,6 +7,8 @@ struct EquatablePlugin: CompilerPlugin {
         EquatableMacro.self,
         EquatableComparedMacro.self,
         EquatableIgnoredMacro.self,
-        EquatableIgnoredUnsafeClosureMacro.self
+        EquatableIgnoredUnsafeClosureMacro.self,
+        EquatableCheckPassMacro.self,
+        EquatableCheckFailMacro.self
     ]
 }

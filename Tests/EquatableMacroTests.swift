@@ -24,8 +24,28 @@ let macroSpecs = [
     "EquatableIgnoredUnsafeClosure": MacroSpec(type: EquatableIgnoredUnsafeClosureMacro.self),
 ]
 
+// The compiler picks `EquatableCheckPassMacro` or `EquatableCheckFailMacro` by overload resolution on the
+// `@_EquatableCheck` argument. The test harness can't do that, so each expansion is tested on its own.
+let passCheckMacroSpecs = ["_EquatableCheck": MacroSpec(type: EquatableCheckPassMacro.self)]
+let failCheckMacroSpecs = ["_EquatableCheck": MacroSpec(type: EquatableCheckFailMacro.self)]
+
 func failureHander(_ failure: TestFailureSpec) {
     Issue.record(failure)
+}
+
+extension String {
+    /// Compilers before 6.3 don't get `@_EquatableCheck` when `@Equatable` has arguments,
+    /// see `EquatableMacro.canAttachCheck(from:)`. The plugin under test is built by the same compiler.
+    func expectedExpansion(macroHasArguments: Bool) -> String {
+        #if compiler(>=6.3)
+            return self
+        #else
+            guard macroHasArguments else { return self }
+            return split(separator: "\n", omittingEmptySubsequences: false)
+                .filter { !$0.contains("@_EquatableCheck(") }
+                .joined(separator: "\n")
+        #endif
+    }
 }
 
 @Suite
@@ -68,7 +88,7 @@ struct EquatableMacroTests {
             """
             extension Person: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.id == rhs.id && lhs.name == rhs.name && lhs.lastName == rhs.lastName && lhs.random == rhs.random
+                    _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.lastName, rhs.lastName) && _$isEqual(lhs.random, rhs.random)
                 }
             }
             """
@@ -76,7 +96,7 @@ struct EquatableMacroTests {
             """
             extension Person: Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.id == rhs.id && lhs.name == rhs.name && lhs.lastName == rhs.lastName && lhs.random == rhs.random
+                    _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.lastName, rhs.lastName) && _$isEqual(lhs.random, rhs.random)
                 }
             }
             """
@@ -84,7 +104,7 @@ struct EquatableMacroTests {
             """
             extension Person: @MainActor Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.id == rhs.id && lhs.name == rhs.name && lhs.lastName == rhs.lastName && lhs.random == rhs.random
+                    _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.lastName, rhs.lastName) && _$isEqual(lhs.random, rhs.random)
                 }
             }
             """
@@ -102,14 +122,18 @@ struct EquatableMacroTests {
             expandedSource:
             """
             struct Person {
+                @_EquatableCheck(type: String.self)
                 let name: String
+                @_EquatableCheck(type: String.self)
                 let lastName: String
+                @_EquatableCheck(type: String.self)
                 let random: String
+                @_EquatableCheck(type: UUID.self)
                 let id: UUID
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -123,7 +147,7 @@ struct EquatableMacroTests {
             """
             extension A: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.basicInt == rhs.basicInt && lhs.basicString == rhs.basicString && lhs.array == rhs.array && lhs.nestedType == rhs.nestedType
+                    _$isEqual(lhs.basicInt, rhs.basicInt) && _$isEqual(lhs.basicString, rhs.basicString) && _$isEqual(lhs.array, rhs.array) && _$isEqual(lhs.nestedType, rhs.nestedType)
                 }
             }
             """
@@ -131,7 +155,7 @@ struct EquatableMacroTests {
             """
             extension A: Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.basicInt == rhs.basicInt && lhs.basicString == rhs.basicString && lhs.array == rhs.array && lhs.nestedType == rhs.nestedType
+                    _$isEqual(lhs.basicInt, rhs.basicInt) && _$isEqual(lhs.basicString, rhs.basicString) && _$isEqual(lhs.array, rhs.array) && _$isEqual(lhs.nestedType, rhs.nestedType)
                 }
             }
             """
@@ -139,7 +163,7 @@ struct EquatableMacroTests {
             """
             extension A: @MainActor Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.basicInt == rhs.basicInt && lhs.basicString == rhs.basicString && lhs.array == rhs.array && lhs.nestedType == rhs.nestedType
+                    _$isEqual(lhs.basicInt, rhs.basicInt) && _$isEqual(lhs.basicString, rhs.basicString) && _$isEqual(lhs.array, rhs.array) && _$isEqual(lhs.nestedType, rhs.nestedType)
                 }
             }
             """
@@ -163,14 +187,18 @@ struct EquatableMacroTests {
                 let nestedInt: Int
             }
             struct A {
+                @_EquatableCheck(type: NestedType.self)
                 let nestedType: NestedType
+                @_EquatableCheck(type: [Int].self)
                 let array: [Int]
+                @_EquatableCheck(type: Int.self)
                 let basicInt: Int
+                @_EquatableCheck(type: String.self)
                 let basicString: String
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -184,7 +212,7 @@ struct EquatableMacroTests {
             """
             extension TitleView: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.title == rhs.title
+                    _$isEqual(lhs.title, rhs.title)
                 }
             }
             """
@@ -192,7 +220,7 @@ struct EquatableMacroTests {
             """
             extension TitleView: Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.title == rhs.title
+                    _$isEqual(lhs.title, rhs.title)
                 }
             }
             """
@@ -200,7 +228,7 @@ struct EquatableMacroTests {
             """
             extension TitleView: @MainActor Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.title == rhs.title
+                    _$isEqual(lhs.title, rhs.title)
                 }
             }
             """
@@ -265,6 +293,7 @@ struct EquatableMacroTests {
                 @WKApplicationDelegateAdaptor var wkApplicationDelegateAdaptor: MyAppDelegate
                 @WKExtensionDelegateAdaptor private var extensionDelegate: MyExtensionDelegate
                 static let staticInt: Int = 42
+                @_EquatableCheck(type: String.self)
                 let title: String
 
                 var body: some View {
@@ -273,7 +302,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -287,7 +316,7 @@ struct EquatableMacroTests {
             """
             extension TitleView: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.title == rhs.title
+                    _$isEqual(lhs.title, rhs.title)
                 }
             }
             """
@@ -295,7 +324,7 @@ struct EquatableMacroTests {
             """
             extension TitleView: Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.title == rhs.title
+                    _$isEqual(lhs.title, rhs.title)
                 }
             }
             """
@@ -303,7 +332,7 @@ struct EquatableMacroTests {
             """
             extension TitleView: @MainActor Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.title == rhs.title
+                    _$isEqual(lhs.title, rhs.title)
                 }
             }
             """
@@ -368,6 +397,7 @@ struct EquatableMacroTests {
                 @SwiftUI.WKApplicationDelegateAdaptor var wkApplicationDelegateAdaptor: MyAppDelegate
                 @SwiftUI.WKExtensionDelegateAdaptor private var extensionDelegate: MyExtensionDelegate
                 static let staticInt: Int = 42
+                @_EquatableCheck(type: String.self)
                 let title: String
 
                 var body: some View {
@@ -376,7 +406,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -390,7 +420,7 @@ struct EquatableMacroTests {
             """
             extension BandView: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """
@@ -398,7 +428,7 @@ struct EquatableMacroTests {
             """
             extension BandView: Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """
@@ -406,7 +436,7 @@ struct EquatableMacroTests {
             """
             extension BandView: @MainActor Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """
@@ -430,6 +460,7 @@ struct EquatableMacroTests {
             """
             struct BandView: View {
                 let year: Int
+                @_EquatableCheck(type: String.self)
                 let name: String
 
                 var body: some View {
@@ -441,7 +472,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -621,7 +652,7 @@ struct EquatableMacroTests {
             """
             extension CustomView: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """
@@ -629,7 +660,7 @@ struct EquatableMacroTests {
             """
             extension CustomView: Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """
@@ -637,7 +668,7 @@ struct EquatableMacroTests {
             """
             extension CustomView: @MainActor Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """
@@ -657,6 +688,7 @@ struct EquatableMacroTests {
             expandedSource:
             """
             struct CustomView: View {
+                @_EquatableCheck(type: String.self)
                 var name: String
                 let closure: (() -> Void)?
 
@@ -666,7 +698,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             diagnostics: [
                 DiagnosticSpec(
                     message: "Arbitary closures are not supported in @Equatable",
@@ -702,7 +734,7 @@ struct EquatableMacroTests {
             """
             extension CustomView: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """
@@ -710,7 +742,7 @@ struct EquatableMacroTests {
             """
             extension CustomView: Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """
@@ -718,7 +750,7 @@ struct EquatableMacroTests {
             """
             extension CustomView: @MainActor Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """
@@ -738,6 +770,7 @@ struct EquatableMacroTests {
             expandedSource:
             """
             struct CustomView: View {
+                @_EquatableCheck(type: String.self)
                 var name: String
                 let closure: (@MainActor () -> Void)?
 
@@ -747,7 +780,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             diagnostics: [
                 DiagnosticSpec(
                     message: "Arbitary closures are not supported in @Equatable",
@@ -771,7 +804,7 @@ struct EquatableMacroTests {
             """
             extension CustomView: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """
@@ -779,7 +812,7 @@ struct EquatableMacroTests {
             """
             extension CustomView: Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """
@@ -787,7 +820,7 @@ struct EquatableMacroTests {
             """
             extension CustomView: @MainActor Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """
@@ -808,6 +841,7 @@ struct EquatableMacroTests {
             """
             struct CustomView: View {
                 let closure: (() -> Void)?
+                @_EquatableCheck(type: String.self)
                 var name: String
 
                 var body: some View {
@@ -816,7 +850,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -830,7 +864,7 @@ struct EquatableMacroTests {
             """
             extension CustomView: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """
@@ -838,7 +872,7 @@ struct EquatableMacroTests {
             """
             extension CustomView: Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """
@@ -846,7 +880,7 @@ struct EquatableMacroTests {
             """
             extension CustomView: @MainActor Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """
@@ -867,6 +901,7 @@ struct EquatableMacroTests {
             """
             struct CustomView: View {
                 let closure: (@MainActor () -> Void)?
+                @_EquatableCheck(type: String.self)
                 var name: String
 
                 var body: some View {
@@ -875,7 +910,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -932,7 +967,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1004,7 +1039,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformances)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1018,7 +1053,7 @@ struct EquatableMacroTests {
             """
             extension ContentView: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.id == rhs.id && lhs.hour == rhs.hour && lhs.name == rhs.name && lhs.customType == rhs.customType && lhs.color == rhs.color
+                    _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.hour, rhs.hour) && _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.customType, rhs.customType) && _$isEqual(lhs.color, rhs.color)
                 }
             }
             """
@@ -1026,7 +1061,7 @@ struct EquatableMacroTests {
             """
             extension ContentView: Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.id == rhs.id && lhs.hour == rhs.hour && lhs.name == rhs.name && lhs.customType == rhs.customType && lhs.color == rhs.color
+                    _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.hour, rhs.hour) && _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.customType, rhs.customType) && _$isEqual(lhs.color, rhs.color)
                 }
             }
             """
@@ -1034,7 +1069,7 @@ struct EquatableMacroTests {
             """
             extension ContentView: @MainActor Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.id == rhs.id && lhs.hour == rhs.hour && lhs.name == rhs.name && lhs.customType == rhs.customType && lhs.color == rhs.color
+                    _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.hour, rhs.hour) && _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.customType, rhs.customType) && _$isEqual(lhs.color, rhs.color)
                 }
             }
             """
@@ -1096,10 +1131,15 @@ struct EquatableMacroTests {
             }
             struct ContentView: View {
                 @State private var count = 0
+                @_EquatableCheck(type: CustomType.self)
                 let customType: CustomType
+                @_EquatableCheck(type: String.self)
                 let name: String
+                @_EquatableCheck(type: Color.self)
                 let color: Color
+                @_EquatableCheck(type: String.self)
                 let id: String
+                @_EquatableCheck(type: Int.self)
                 let hour: Int = 21
                 let classType: ClassType
                 let onTapOptional: (() -> Void)?
@@ -1118,7 +1158,7 @@ struct EquatableMacroTests {
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1159,7 +1199,7 @@ struct EquatableMacroTests {
             """
             extension Person: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
+                    _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.first, rhs.first) && _$isEqual(lhs.second, rhs.second) && _$isEqual(lhs.third, rhs.third) && _$isEqual(lhs.nestedType, rhs.nestedType)
                 }
             }
             """
@@ -1167,7 +1207,7 @@ struct EquatableMacroTests {
             """
             extension Person: Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
+                    _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.first, rhs.first) && _$isEqual(lhs.second, rhs.second) && _$isEqual(lhs.third, rhs.third) && _$isEqual(lhs.nestedType, rhs.nestedType)
                 }
             }
             """
@@ -1175,7 +1215,7 @@ struct EquatableMacroTests {
             """
             extension Person: @MainActor Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
+                    _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.first, rhs.first) && _$isEqual(lhs.second, rhs.second) && _$isEqual(lhs.third, rhs.third) && _$isEqual(lhs.nestedType, rhs.nestedType)
                 }
             }
             """
@@ -1200,15 +1240,20 @@ struct EquatableMacroTests {
                 struct NestedType: Equatable {
                     let nestedInt: Int
                 }
+                @_EquatableCheck(type: String.self)
                 let name: String
+                @_EquatableCheck(type: [Int].self)
                 let first: [Int]
+                @_EquatableCheck(type: Array<Int>.self)
                 let second: Array<Int>
+                @_EquatableCheck(type: Swift.Array<Int>.self)
                 let third: Swift.Array<Int>
+                @_EquatableCheck(type: NestedType.self)
                 let nestedType: NestedType
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1222,7 +1267,7 @@ struct EquatableMacroTests {
             """
             extension Person: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
+                    _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.first, rhs.first) && _$isEqual(lhs.second, rhs.second) && _$isEqual(lhs.third, rhs.third) && _$isEqual(lhs.nestedType, rhs.nestedType)
                 }
             }
             """
@@ -1230,7 +1275,7 @@ struct EquatableMacroTests {
             """
             extension Person: Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
+                    _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.first, rhs.first) && _$isEqual(lhs.second, rhs.second) && _$isEqual(lhs.third, rhs.third) && _$isEqual(lhs.nestedType, rhs.nestedType)
                 }
             }
             """
@@ -1238,7 +1283,7 @@ struct EquatableMacroTests {
             """
             extension Person: @MainActor Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name && lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third && lhs.nestedType == rhs.nestedType
+                    _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.first, rhs.first) && _$isEqual(lhs.second, rhs.second) && _$isEqual(lhs.third, rhs.third) && _$isEqual(lhs.nestedType, rhs.nestedType)
                 }
             }
             """
@@ -1263,15 +1308,20 @@ struct EquatableMacroTests {
                 struct NestedType: Equatable {
                     let nestedInt: Int
                 }
+                @_EquatableCheck(type: String.self)
                 let name: String
+                @_EquatableCheck(type: [Int: Int].self)
                 let first: [Int:Int]
+                @_EquatableCheck(type: Dictionary<Int, Int>.self)
                 let second: Dictionary<Int, Int>
+                @_EquatableCheck(type: Swift.Dictionary<Int, Int>.self)
                 let third: Swift.Dictionary<Int, Int>
+                @_EquatableCheck(type: NestedType.self)
                 let nestedType: NestedType
             }
 
             \(generatedConformance)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1285,15 +1335,15 @@ struct EquatableMacroTests {
             """
             extension User: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.id == rhs.id && lhs.age == rhs.age && lhs.name == rhs.name
+                    _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.age, rhs.age) && _$isEqual(lhs.name, rhs.name)
                 }
             }
 
             extension User {
                 nonisolated public func hash(into hasher: inout Hasher) {
-                    hasher.combine(id)
-                    hasher.combine(age)
-                    hasher.combine(name)
+                    _$hash(id, into: &hasher)
+                    _$hash(age, into: &hasher)
+                    _$hash(name, into: &hasher)
                 }
             }
             """
@@ -1301,15 +1351,15 @@ struct EquatableMacroTests {
             """
             extension User: Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.id == rhs.id && lhs.age == rhs.age && lhs.name == rhs.name
+                    _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.age, rhs.age) && _$isEqual(lhs.name, rhs.name)
                 }
             }
 
             extension User {
                 public func hash(into hasher: inout Hasher) {
-                    hasher.combine(id)
-                    hasher.combine(age)
-                    hasher.combine(name)
+                    _$hash(id, into: &hasher)
+                    _$hash(age, into: &hasher)
+                    _$hash(name, into: &hasher)
                 }
             }
             """
@@ -1317,15 +1367,15 @@ struct EquatableMacroTests {
             """
             extension User: @MainActor Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.id == rhs.id && lhs.age == rhs.age && lhs.name == rhs.name
+                    _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.age, rhs.age) && _$isEqual(lhs.name, rhs.name)
                 }
             }
 
             extension User {
                 public func hash(into hasher: inout Hasher) {
-                    hasher.combine(id)
-                    hasher.combine(age)
-                    hasher.combine(name)
+                    _$hash(id, into: &hasher)
+                    _$hash(age, into: &hasher)
+                    _$hash(name, into: &hasher)
                 }
             }
             """
@@ -1346,15 +1396,18 @@ struct EquatableMacroTests {
             expandedSource:
             """
             struct User: Hashable {
+              @_EquatableCheck(type: Int.self)
               let id: Int
               var name = ""
               var onTap: () -> Void
+              @_EquatableCheck(type: Int.self)
               var age: Int
+              @_EquatableCheck(type: String.self)
               var name: String
             }
 
             \(generatedConformances)
-            """,
+            """.expectedExpansion(macroHasArguments: isolation != .nonisolated),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1378,7 +1431,9 @@ struct EquatableMacroTests {
                 expandedSource:
                 """
                 struct MainActorView: View {
+                    @_EquatableCheck(type: Int.self)
                     let a: Int 
+                    @_EquatableCheck(type: String.self)
                     let name: String
 
                     var body: some View {
@@ -1388,10 +1443,10 @@ struct EquatableMacroTests {
 
                 extension MainActorView: @MainActor Equatable {
                     public static func == (lhs: Self, rhs: Self) -> Bool {
-                        lhs.a == rhs.a && lhs.name == rhs.name
+                        _$isEqual(lhs.a, rhs.a) && _$isEqual(lhs.name, rhs.name)
                     }
                 }
-                """,
+                """.expectedExpansion(macroHasArguments: true),
                 macroSpecs: macroSpecs,
                 failureHandler: failureHander
             )
@@ -1412,18 +1467,22 @@ struct EquatableMacroTests {
             expandedSource:
             """
             struct Person {
+                @_EquatableCheck(type: String.self)
                 let name: String
+                @_EquatableCheck(type: String.self)
                 let lastName: String
+                @_EquatableCheck(type: String.self)
                 let random: String
+                @_EquatableCheck(type: UUID.self)
                 let id: UUID
             }
 
             extension Person: Equatable {
                 public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.id == rhs.id && lhs.name == rhs.name && lhs.lastName == rhs.lastName && lhs.random == rhs.random
+                    _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.lastName, rhs.lastName) && _$isEqual(lhs.random, rhs.random)
                 }
             }
-            """,
+            """.expectedExpansion(macroHasArguments: true),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1444,18 +1503,22 @@ struct EquatableMacroTests {
             expandedSource:
             """
             struct Person {
+                @_EquatableCheck(type: String.self)
                 let name: String
+                @_EquatableCheck(type: String.self)
                 let lastName: String
+                @_EquatableCheck(type: String.self)
                 let random: String
+                @_EquatableCheck(type: UUID.self)
                 let id: UUID
             }
 
             extension Person: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.id == rhs.id && lhs.name == rhs.name && lhs.lastName == rhs.lastName && lhs.random == rhs.random
+                    _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.lastName, rhs.lastName) && _$isEqual(lhs.random, rhs.random)
                 }
             }
-            """,
+            """.expectedExpansion(macroHasArguments: true),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1475,17 +1538,20 @@ struct EquatableMacroTests {
             expandedSource:
             """
             struct Person {
+                @_EquatableCheck(type: String.self)
                 let first: String
+                @_EquatableCheck(type: String.self)
                 let second: String
+                @_EquatableCheck(type: String.self)
                 let third: String
             }
 
             extension Person: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.first == rhs.first && lhs.second == rhs.second && lhs.third == rhs.third
+                    _$isEqual(lhs.first, rhs.first) && _$isEqual(lhs.second, rhs.second) && _$isEqual(lhs.third, rhs.third)
                 }
             }
-            """,
+            """.expectedExpansion(macroHasArguments: true),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1509,18 +1575,22 @@ struct EquatableMacroTests {
             expandedSource:
             """
             struct Person {
+                @_EquatableCheck(type: String.self)
                 let name: String
+                @_EquatableCheck(type: String.self)
                 let lastName: String
+                @_EquatableCheck(type: String.self)
                 let random: String
+                @_EquatableCheck(type: UUID.self)
                 let id: UUID
             }
 
             extension Person: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.id == rhs.id && lhs.name == rhs.name && lhs.lastName == rhs.lastName && lhs.random == rhs.random
+                    _$isEqual(lhs.id, rhs.id) && _$isEqual(lhs.name, rhs.name) && _$isEqual(lhs.lastName, rhs.lastName) && _$isEqual(lhs.random, rhs.random)
                 }
             }
-            """,
+            """.expectedExpansion(macroHasArguments: true),
             macroSpecs: macroSpecs,
             failureHandler: failureHander
         )
@@ -1539,13 +1609,14 @@ struct EquatableMacroTests {
             expandedSource:
             """
             struct TestGenericContent<Content: View> {
+                @_EquatableCheck(type: String.self)
                 let name: String
                 let closure: (() -> Content)?
             }
 
             extension TestGenericContent: Equatable {
                 nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.name == rhs.name
+                    _$isEqual(lhs.name, rhs.name)
                 }
             }
             """,
@@ -1553,6 +1624,166 @@ struct EquatableMacroTests {
             failureHandler: failureHander
         )
     }
+
+    @Test
+    func checkAttributeIsAttachedToComparedProperties() async throws {
+        assertMacroExpansion(
+            """
+            @Equatable
+            struct Shapes {
+                let plain: Plain
+                let optional: Plain?
+                let unwrapped: Plain!
+                let existential: any Shape
+                let composition: Shape & AnyObject
+                let tuple: (Int, String)
+                let metatype: Plain.Type
+                let dictionary: [String:Int]
+                let nested: Outer.Inner
+                var inferred = 0
+                var inferredObject = Plain()
+                var inferredTuple = (1, 2)
+                @EquatableIgnored let ignored: Plain
+                @State private var state = 0
+                static let shared = Shapes()
+                var computed: Int { 0 }
+            }
+            """,
+            expandedSource:
+            """
+            struct Shapes {
+                @_EquatableCheck(type: Plain.self)
+                let plain: Plain
+                @_EquatableCheck(type: Plain?.self)
+                let optional: Plain?
+                @_EquatableCheck(type: (Plain?).self)
+                let unwrapped: Plain!
+                @_EquatableCheck(type: (any Shape).self)
+                let existential: any Shape
+                @_EquatableCheck(type: (Shape & AnyObject).self)
+                let composition: Shape & AnyObject
+                let tuple: (Int, String)
+                let metatype: Plain.Type
+                @_EquatableCheck(type: [String: Int].self)
+                let dictionary: [String:Int]
+                @_EquatableCheck(type: Outer.Inner.self)
+                let nested: Outer.Inner
+                @_EquatableCheck(value: 0)
+                var inferred = 0
+                @_EquatableCheck(value: Plain())
+                var inferredObject = Plain()
+                var inferredTuple = (1, 2)
+                let ignored: Plain
+                @State private var state = 0
+                static let shared = Shapes()
+                var computed: Int { 0 }
+            }
+
+            extension Shapes: Equatable {
+                nonisolated public static func == (lhs: Self, rhs: Self) -> Bool {
+                    _$isEqual(lhs.dictionary, rhs.dictionary) && _$isEqual(lhs.plain, rhs.plain) && _$isEqual(lhs.unwrapped, rhs.unwrapped) && _$isEqual(lhs.existential, rhs.existential) && _$isEqual(lhs.composition, rhs.composition) && _$isEqual(lhs.tuple, rhs.tuple) && _$isEqual(lhs.metatype, rhs.metatype) && _$isEqual(lhs.nested, rhs.nested) && _$isEqual(lhs.optional, rhs.optional) && _$isEqual(lhs.inferred, rhs.inferred) && _$isEqual(lhs.inferredObject, rhs.inferredObject) && _$isEqual(lhs.inferredTuple, rhs.inferredTuple)
+                }
+            }
+            """,
+            macroSpecs: macroSpecs,
+            failureHandler: failureHander
+        )
+    }
+
+    @Test
+    func checkPassesForEquatableAndClassProperties() async throws {
+        assertMacroExpansion(
+            """
+            struct Foo {
+                @_EquatableCheck(type: Bar.self)
+                let bar: Bar
+                @_EquatableCheck(value: 0)
+                var count = 0
+            }
+            """,
+            expandedSource:
+            """
+            struct Foo {
+                let bar: Bar
+                var count = 0
+            }
+            """,
+            macroSpecs: passCheckMacroSpecs,
+            failureHandler: failureHander
+        )
+    }
+
+    @Test
+    func nonEquatablePropertyIsReportedOnTheProperty() async throws {
+        assertMacroExpansion(
+            """
+            struct Foo {
+                @_EquatableCheck(type: Bar.self)
+                let bar: Bar
+                @_EquatableCheck(value: Bar())
+                var inferred = Bar()
+            }
+            """,
+            expandedSource:
+            """
+            struct Foo {
+                let bar: Bar
+                var inferred = Bar()
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: "Property 'bar' of type 'Bar' does not conform to 'Equatable'",
+                    line: 3,
+                    column: 14,
+                    fixIts: [
+                        FixItSpec(message: "Mark 'bar' with @EquatableIgnored to exclude it from the equality comparison")
+                    ]
+                ),
+                DiagnosticSpec(
+                    message: "Property 'inferred' does not conform to 'Equatable'",
+                    line: 5,
+                    column: 9,
+                    fixIts: [
+                        FixItSpec(message: "Mark 'inferred' with @EquatableIgnored to exclude it from the equality comparison")
+                    ]
+                )
+            ],
+            macroSpecs: failCheckMacroSpecs,
+            fixedSource:
+            """
+            struct Foo {
+                @EquatableIgnored let bar: Bar
+                @EquatableIgnored var inferred = Bar()
+            }
+            """,
+            failureHandler: failureHander
+        )
+    }
+
+    @Test
+    func checkCannotBeAppliedToNonProperties() async throws {
+        assertMacroExpansion(
+            """
+            struct Foo {
+                @_EquatableCheck(type: Int.self)
+                func bar() {}
+            }
+            """,
+            expandedSource:
+            """
+            struct Foo {
+                func bar() {}
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: "@_EquatableCheck can only be applied to properties", line: 2, column: 5)
+            ],
+            macroSpecs: failCheckMacroSpecs,
+            failureHandler: failureHander
+        )
+    }
+
 }
 
 // swiftlint:enable all

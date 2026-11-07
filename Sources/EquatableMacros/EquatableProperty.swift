@@ -11,13 +11,23 @@ struct EquatableProperty {
     }
 
     let name: String
+    /// The explicit type annotation, if any.
     let type: TypeSyntax?
+    /// The initializer expression, used by `@_EquatableCheck` to infer the type when there is no annotation.
+    let initializer: ExprSyntax?
     let comparison: Comparison
     private let strategyAlias: String
 
-    init(name: String, type: TypeSyntax?, comparison: Comparison, in context: some MacroExpansionContext) {
+    init(
+        name: String,
+        type: TypeSyntax?,
+        initializer: ExprSyntax?,
+        comparison: Comparison,
+        in context: some MacroExpansionContext
+    ) {
         self.name = name
         self.type = type
+        self.initializer = initializer
         self.comparison = comparison
         if case .strategy = comparison {
             strategyAlias = context.makeUniqueName("ComparisonStrategy").text
@@ -34,17 +44,22 @@ struct EquatableProperty {
     }
 
     var equalityExpression: String {
-        if case .identity = comparison {
-            return "lhs.\(name) === rhs.\(name)"
+        switch comparison {
+        case .value:
+            // `_$isEqual` is overloaded so that classes without `Equatable` fall back to `===`.
+            "_$isEqual(lhs.\(name), rhs.\(name))"
+        case .identity:
+            "lhs.\(name) === rhs.\(name)"
+        case .keyPath, .strategy:
+            "\(comparisonValue(for: "lhs.\(name)")) == \(comparisonValue(for: "rhs.\(name)"))"
         }
-        return "\(comparisonValue(for: "lhs.\(name)")) == \(comparisonValue(for: "rhs.\(name)"))"
     }
 
     var hashExpression: String {
         switch comparison {
         case .value:
-            // Preserve the existing expansion for unannotated properties.
-            "hasher.combine(\(name))"
+            // `_$hash` is overloaded so that classes without `Hashable` hash by `ObjectIdentifier`.
+            "_$hash(\(name), into: &hasher)"
         case .identity:
             // Contextual optional promotion supports both optional and nonoptional
             // references without guessing the property's resolved type from syntax.
